@@ -1,0 +1,21 @@
+{
+  "id": "GEN-003",
+  "name": "LLM CFO-BEC invoice-thread IBAN swap",
+  "playbook": "cfo_bec_wire",
+  "summary": "LLM drafts a vendor-consistent email thread announcing a bank change; finance releases a large RTGS wire to the attacker's mule company before verification catches up.",
+  "rails": ["wire"],
+  "surfaces": ["social_engineering", "customer_support"],
+  "capabilities": ["text_generation"],
+  "ttps": [
+    "thread-hijack style reply with cloned signature block",
+    "plausible urgency framing ('release today')",
+    "beneficiary account swap mid-thread",
+    "Friday-afternoon timing"
+  ],
+  "observables": [
+    {"name": "large_wire_new_beneficiary", "description": "biggest-ever credit to fresh corporate payee", "signal_strength": 0.85},
+    {"name": "single_large_wire", "description": "one-shot amount vs split pattern", "signal_strength": 0.4}
+  ],
+  "params": {"n_attacks": 2, "amount_range": [1500000, 20000000], "split_max": 1, "hour": 16},
+  "origin": "seed"
+}

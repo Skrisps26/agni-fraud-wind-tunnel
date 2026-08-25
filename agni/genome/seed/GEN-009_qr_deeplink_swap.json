@@ -1,0 +1,22 @@
+{
+  "id": "GEN-009",
+  "name": "QR deep-link swap collect-request scam",
+  "playbook": "personalized_smishing",
+  "summary": "Attacker overlays fake QR posters / sends 'collect request' deep links posing as the merchant the user just paid; user authorizes a debit thinking it's a refund confirmation.",
+  "rails": ["upi"],
+  "surfaces": ["social_engineering"],
+  "capabilities": ["image_generation", "text_generation"],
+  "ttps": [
+    "QR poster overlay / dynamic deep-link generation",
+    "merchant-context personalization from recent payment",
+    "'enter UPI PIN to RECEIVE money' confusion exploit",
+    "rapid monetization through wallet cash-out"
+  ],
+  "observables": [
+    {"name": "collect_request_debit_confusion", "description": "debit immediately after merchant credit pattern", "signal_strength": 0.7},
+    {"name": "new_payee_small_then_repeat", "description": "test debit followed by larger ones", "signal_strength": 0.75}
+  ],
+  "params": {"n_victims": 4, "harvest_delay_h": [0.5, 2], "cnp_txns": [4, 8], "cnp_amount": [300, 4000]},
+  "origin": "seed",
+  "parent_ids": ["GEN-005"]
+}

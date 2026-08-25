@@ -1,0 +1,22 @@
+{
+  "id": "GEN-008",
+  "name": "LLM task-scam mule-network recruitment + layering",
+  "playbook": "mule_recruitment",
+  "summary": "LLM-generated job/task pitches recruit dozens of small depositors ('activation fee'); bait payouts keep them engaged while layered wire chains consolidate proceeds through hop networks.",
+  "rails": ["upi", "wire"],
+  "surfaces": ["infrastructure", "social_engineering"],
+  "capabilities": ["text_generation", "agent_orchestration"],
+  "ttps": [
+    "LLM outreach at scale across WhatsApp/Telegram idioms",
+    "small-bait economics to stay under reporting thresholds",
+    "fan-in consolidation to L1 mules",
+    "multi-hop layering with onward NEFT/RTGS"
+  ],
+  "observables": [
+    {"name": "dst_fan_in_anomaly", "description": "many unrelated sources paying one destination", "signal_strength": 0.85},
+    {"name": "layered_forwarding", "description": "funds forwarded within 24h of receipt", "signal_strength": 0.8},
+    {"name": "recruitment_text_signal", "description": "task-scam phrasing in messages", "signal_strength": 0.65}
+  ],
+  "params": {"n_recruits": 6, "payout": [500, 1500], "hop_chains": 2, "layering_rounds": 1},
+  "origin": "seed"
+}

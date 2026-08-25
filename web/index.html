@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AGNI - Fraud Wind Tunnel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  body{background:#0b0f17;color:#e5e7eb;font-family:ui-sans-serif,system-ui}
+  .card{background:#111827;border:1px solid #1f2937;border-radius:.75rem}
+  .chip{font-size:.65rem;padding:.1rem .45rem;border-radius:9999px;border:1px solid #374151}
+  .fraud{color:#f87171}.ok{color:#34d399}
+  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#1f2937;border-radius:3px}
+</style>
+</head>
+<body class="min-h-screen">
+<header class="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+  <div class="flex items-baseline gap-3">
+    <h1 class="text-lg font-bold tracking-wide">AGNI <span class="text-orange-400">Fraud Wind Tunnel</span></h1>
+    <span class="text-xs text-gray-500">closed-loop GenAI payment-fraud red team</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <span id="tteBadge" class="chip border-orange-500 text-orange-300">TtE -</span>
+    <button id="runBtn" class="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg">
+      Run generation
+    </button>
+  </div>
+</header>
+
+<main class="grid grid-cols-12 gap-4 p-4">
+
+  <!-- Pillar 1: Genome browser -->
+  <section class="col-span-3 card p-4 flex flex-col max-h-[85vh]">
+    <h2 class="font-semibold text-sm mb-1">Fraud Genome</h2>
+    <p class="text-[11px] text-gray-500 mb-2">machine-readable attack vectors (identify)</p>
+    <input id="gSearch" placeholder="filter vectors..." class="mb-2 bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs"/>
+    <ul id="genomeList" class="space-y-1 overflow-y-auto text-xs flex-1"></ul>
+    <div id="genomeDetail" class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 overflow-y-auto max-h-64"></div>
+  </section>
+
+  <!-- Pillar 2: Attack theater -->
+  <section class="col-span-5 card p-4 flex flex-col max-h-[85vh]">
+    <h2 class="font-semibold text-sm mb-1">Attack Theater</h2>
+    <p class="text-[11px] text-gray-500 mb-2">live kill-chain artifacts + flagged transactions (generate / defend)</p>
+    <div id="theater" class="overflow-y-auto space-y-2 text-xs flex-1 pr-1"></div>
+  </section>
+
+  <!-- Pillar 3: Defense console -->
+  <section class="col-span-4 card p-4 flex flex-col max-h-[85vh]">
+    <h2 class="font-semibold text-sm mb-1">Defense Console</h2>
+    <p class="text-[11px] text-gray-500 mb-3">Sentinel metrics per Red Queen generation</p>
+    <div id="cards" class="grid grid-cols-3 gap-2 text-center mb-3"></div>
+    <canvas id="aucChart" height="150"></canvas>
+    <canvas id="fprChart" height="110" class="mt-2"></canvas>
+    <div id="runlog" class="mt-3 text-[11px] text-gray-500 font-mono overflow-y-auto flex-1"></div>
+  </section>
+</main>
+
+<footer class="px-5 pb-3 text-[10px] text-gray-600">
+  Sandbox simulation. Synthetic identities only; playbooks are policy-level TTPs, not operational tooling.
+</footer>
+
+<script>
+let state = {history:[], genomes:[], alerts:[], tte_generations:0, loop_gain_auc:0, fidelity_mean:0};
+
+function metricCards(){
+  const h = state.history, last = h[h.length-1] || {};
+  const cards = [
+    ["ROC AUC", last.roc_auc ?? "-"], ["Recall", last.recall ?? "-"],
+    ["FPR", last.fpr != null ? (last.fpr*100).toFixed(2)+"%" : "-"],
+    ["Fidelity", state.fidelity_mean || "-"],
+    ["TtE", state.tte_generations || 0], ["dAUC gain", state.loop_gain_auc ?? "-"],
+  ];
+  document.getElementById("cards").innerHTML = cards.map(([k,v])=>
+    `<div class="bg-gray-900/60 rounded-lg py-2"><div class="text-[10px] text-gray-500">${k}</div>
+     <div class="text-sm font-bold ${k==="FPR"?"":"text-orange-300"}">${v}</div></div>`).join("");
+  document.getElementById("tteBadge").textContent = "TtE " + (state.tte_generations||0) + " gens";
+}
+
+function charts(){
+  const labels = state.history.map(h=>"g"+h.generation);
+  const mk=(id,color,data,label)=>{
+    const el=document.getElementById(id);
+    if(el.chart) {el.chart.data.labels=labels; el.chart.data.datasets[0].data=data; el.chart.update(); return;}
+    el.chart=new Chart(el,{type:"line",data:{labels,datasets:[{label,data,borderColor:color,
+      backgroundColor:color+"22",fill:true,tension:.3,pointRadius:2}]},
+      options:{plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:"#6b7280",fontSize:9}},y:{ticks:{color:"#6b7280",fontSize:9}}}}});
+  };
+  mk("aucChart","#fb923c",state.history.map(h=>h.roc_auc),"ROC AUC");
+  mk("fprChart","#f87171",state.history.map(h=>h.fpr*100),"FPR %");
+}
+
+function genomeList(){
+  const q=document.getElementById("gSearch").value.toLowerCase();
+  const ul=document.getElementById("genomeList");
+  ul.innerHTML = state.genomes.filter(g=>
+    !q || g.name.toLowerCase().includes(q) || g.id.toLowerCase().includes(q))
+    .map(g=>`<li><button onclick="showGenome('${g.id}')" data-id="${g.id}"
+      class="w-full text-left hover:bg-gray-800 rounded px-2 py-1">
+      <span class="text-gray-500">${g.id}</span> ${g.name}
+      <span class="chip ml-1">${(g.capabilities||[])[0]||""}</span></button></li>`).join("");
+}
+
+window.showGenome=function(id){
+  const g=state.genomes.find(x=>x.id===id); if(!g) return;
+  document.getElementById("genomeDetail").innerHTML =
+    `<div class="font-semibold text-gray-200 mb-1">${g.name}</div>
+     <div class="mb-2">${g.summary||""}</div>
+     <div class="text-orange-300 mb-1">TTPs</div>
+     <ul class="list-disc ml-4">${(g.ttps||[]).map(t=>`<li>${t}</li>`).join("")}</ul>
+     <div class="text-orange-300 mt-2 mb-1">Detector observables</div>
+     <ul class="list-disc ml-4">${(g.observables||[]).map(o=>`<li>${o.name} - ${o.description}</li>`).join("")}</ul>`;
+};
+
+function theater(){
+  const t=document.getElementById("theater");
+  const rows=[...state.alerts].reverse().slice(-40);
+  t.innerHTML = rows.length? rows.map(a=>`
+    <div class="border-l-2 ${a.flag?"border-red-500":"border-gray-700"} pl-2 py-1">
+      <div class="flex justify-between"><span class="${a.is_fraud?"fraud font-semibold":"ok"}">
+        ${a.is_fraud?"ATTACK":a.flag?"flagged":"clean"} · ₹${Number(a.amount).toLocaleString("en-IN")}</span>
+        <span class="text-gray-600">${a.score}</span></div>
+      <div class="text-gray-500">${a.src} -> ${a.dst}${a.attack_id?` · ${a.attack_id}`:""}</div>
+    </div>`).join("") :
+    `<div class="text-gray-600">No run yet - press "Run generation".</div>`;
+}
+
+async function refresh(){
+  const r=await fetch("/api/state"); state=await r.json();
+  metricCards(); charts(); genomeList(); theater();
+}
+
+document.getElementById("runBtn").onclick = async (e)=>{
+  e.target.disabled=true; e.target.textContent="Running...";
+  try{
+    const r=await fetch("/api/loop/run",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify({generations:1})});
+    const d=await r.json();
+    (d.new_history||[]).forEach(h=>{
+      document.getElementById("runlog").insertAdjacentHTML("afterbegin",
+        `gen${h.generation}: auc=${h.roc_auc} rec=${h.recall} fpr=${h.fpr} fid=${h.fidelity_mean}\n`)});
+    await refresh();
+  } finally {
+    e.target.disabled=false; e.target.textContent="Run generation";
+  }
+};
+document.getElementById("gSearch").oninput=genomeList;
+refresh();
+</script>
+</body>
+</html>

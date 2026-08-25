@@ -1,0 +1,23 @@
+{
+  "id": "GEN-001",
+  "name": "Voice-clone relative-in-emergency UPI drain",
+  "playbook": "voice_relative_upi",
+  "summary": "Attacker clones a family member's voice from social-media audio, calls the victim posing as the relative in a hospital emergency, and extracts rushed UPI transfers to a fresh mule VPA within minutes.",
+  "rails": ["upi"],
+  "surfaces": ["social_engineering"],
+  "capabilities": ["voice_clone", "text_generation"],
+  "ttps": [
+    "harvest target audio from public posts",
+    "TTS voice clone with emotional distress script",
+    "caller-ID spoofing of a known contact",
+    "urgency + isolation pressure (keep victim on call)",
+    "fresh mule VPA per campaign"
+  ],
+  "observables": [
+    {"name": "new_payee_first_payment", "description": "first-ever transfer to destination", "signal_strength": 0.7},
+    {"name": "burst_velocity_p2p", "description": "multiple P2P transfers in <30 min", "signal_strength": 0.8},
+    {"name": "off_hours_activity", "description": "late-night activity atypical for account", "signal_strength": 0.5}
+  ],
+  "params": {"n_victims": 3, "transfers": [2, 4], "amount_range": [2000, 25000], "window_min": [15, 45], "night_bias": 0.6},
+  "origin": "seed"
+}

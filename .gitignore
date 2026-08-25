@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+runs/*.json
+!runs/.gitkeep
+data/anchor/*.csv
+data/anchor/*.zip
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+.DS_Store

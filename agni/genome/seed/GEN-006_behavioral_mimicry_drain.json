@@ -1,0 +1,23 @@
+{
+  "id": "GEN-006",
+  "name": "Behavioral-mimicry stealth card drain",
+  "playbook": "behavioral_mimicry",
+  "summary": "Attacker with stolen credentials replays the victim's own category mix, ticket sizes and hour histogram at low amounts over days - statistically camouflaged CNP spend siphoned via resellers.",
+  "rails": ["card", "wallet"],
+  "surfaces": ["behavioral"],
+  "capabilities": ["agent_orchestration"],
+  "ttps": [
+    "profile cloning from victim history",
+    "amount jitter tuned to victim dispersion",
+    "hour-of-day histogram matching",
+    "long-horizon small-ticket drain",
+    "periodic wallet cash-out"
+  ],
+  "observables": [
+    {"name": "category_shift_vs_baseline", "description": "same profile but reseller-heavy destinations", "signal_strength": 0.6},
+    {"name": "sustained_low_velocity_spend", "description": "many days of steady small online spend", "signal_strength": 0.55},
+    {"name": "wallet_cashout_recurrence", "description": "repeated P2P to same new VPA", "signal_strength": 0.7}
+  ],
+  "params": {"n_victims": 3, "duration_days": [4, 8], "txns_per_day": [2, 4], "amount_jitter": 0.35},
+  "origin": "seed"
+}

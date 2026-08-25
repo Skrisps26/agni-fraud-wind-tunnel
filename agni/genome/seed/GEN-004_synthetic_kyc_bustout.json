@@ -1,0 +1,23 @@
+{
+  "id": "GEN-004",
+  "name": "GenAI synthetic-KYC bust-out",
+  "playbook": "synthetic_kyc",
+  "summary": "GAN face + AI-edited utility bill + deepfake liveness pass wallet/bank onboarding; dormant warm-up inflows build limits, then a burst of high-risk spend and cash-out before chargebacks land.",
+  "rails": ["card", "wallet", "upi"],
+  "surfaces": ["onboarding_kyc"],
+  "capabilities": ["image_generation", "document_forgery", "deepfake_video"],
+  "ttps": [
+    "GAN-generated identity documents",
+    "deepfake liveness render passing blink/turn checks",
+    "dormancy period to age the account",
+    "small warm-up inflows to raise limits",
+    "bust-out burst at high-risk MCCs then cash-out"
+  ],
+  "observables": [
+    {"name": "onboarding_artifact_anomaly", "description": "document/liveness signals at KYC time", "signal_strength": 0.75},
+    {"name": "dormancy_then_burst", "description": "quiet account erupts into high-risk spend", "signal_strength": 0.85},
+    {"name": "device_first_seen_at_onboard", "description": "single device tied to account lifetime", "signal_strength": 0.5}
+  ],
+  "params": {"n_identities": 2, "dormancy_days": [8, 18], "burst_txns": 8, "burst_spread_h": 6},
+  "origin": "seed"
+}
