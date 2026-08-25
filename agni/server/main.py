@@ -1,12 +1,12 @@
 """FastAPI backend for the AGNI wind-tunnel prototype.
 
 GET  /                -> dashboard (web/index.html)
-GET  /api/state       -> current genomes, generation history, alerts, headline stats
-POST /api/loop/run    -> execute N Red Queen generations in-process and return them
+GET  /api/state       -> genomes, generation history, alerts, kill-chain
+                         artifacts, headline stats
+POST /api/loop/run    -> execute N Red Queen generations in-process
 
-State source of truth: an in-process store seeded from runs/latest.json when the
-CLI has been used before. The demo flow is: open dashboard, press "Run", watch
-the arms race.
+State source of truth: an in-process store seeded from runs/latest.json when
+the CLI has been used before. Demo flow: open dashboard, press "Run".
 """
 
 from __future__ import annotations
@@ -14,14 +14,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import numpy as np
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from agni.config import load
 from agni.genome.schema import load_genomes
-from agni.loop.redqueen import _alerts, run_loop
+from agni.loop.redqueen import _alerts, _artifact_feed, run_loop
 
 app = FastAPI(title="AGNI - Fraud Wind Tunnel", version="0.1.0")
 
@@ -44,6 +43,7 @@ def _ensure_state() -> None:
         "genomes": data.get("genomes_final",
                             [json.loads(g.model_dump_json()) for g in load_genomes()]),
         "alerts": data.get("alerts", []),
+        "artifacts": data.get("artifacts", []),
         "tte": data.get("tte_generations", 0),
         "loop_gain": data.get("loop_gain_auc", 0.0),
         "fidelity": data.get("fidelity_overall", 0.0),
@@ -68,6 +68,7 @@ def state() -> JSONResponse:
         "history": _STATE["history"],
         "genomes": _STATE["genomes"],
         "alerts": _STATE["alerts"],
+        "artifacts": _STATE["artifacts"],
         "tte_generations": _STATE["tte"],
         "loop_gain_auc": _STATE["loop_gain"],
         "fidelity_mean": _STATE["fidelity"],
@@ -81,10 +82,14 @@ def run(req: RunRequest) -> JSONResponse:
     if req.seed is not None:
         cfg.seed = int(req.seed)
     result, extra = run_loop(cfg, generations=max(1, min(int(req.generations), 10)))
-    payload = result.to_json()
+    # renumber appended generations so chart labels stay monotonic across runs
+    base = len(_STATE["history"])
+    for i, h in enumerate(result.history):
+        h["generation"] = base + i
     _STATE["history"].extend(result.history)
     _STATE["genomes"] = result.genomes_final
     _STATE["alerts"] = _alerts(extra)
+    _STATE["artifacts"] = _artifact_feed(extra)
     _STATE["tte"] = max(_STATE["tte"], result.tte_generations)
     _STATE["loop_gain"] = result.loop_gain_auc
     _STATE["fidelity"] = result.fidelity_overall
@@ -92,4 +97,5 @@ def run(req: RunRequest) -> JSONResponse:
                          "tte_generations": result.tte_generations,
                          "loop_gain_auc": result.loop_gain_auc,
                          "state": {k: _STATE[k] for k in
-                                   ("history", "tte", "loop_gain", "fidelity")}})
+                                   ("history", "artifacts", "tte", "loop_gain",
+                                    "fidelity")}})

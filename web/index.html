@@ -105,8 +105,10 @@ function genomeList(){
 
 window.showGenome=function(id){
   const g=state.genomes.find(x=>x.id===id); if(!g) return;
+  const lineage = (g.parent_ids&&g.parent_ids.length)? g.parent_ids.join(", ") : "seed vector";
   document.getElementById("genomeDetail").innerHTML =
     `<div class="font-semibold text-gray-200 mb-1">${g.name}</div>
+     <div class="chip inline-block mb-2">${g.origin||"seed"} · lineage: ${lineage} · born gen ${g.generation_born??0}</div>
      <div class="mb-2">${g.summary||""}</div>
      <div class="text-orange-300 mb-1">TTPs</div>
      <ul class="list-disc ml-4">${(g.ttps||[]).map(t=>`<li>${t}</li>`).join("")}</ul>
@@ -116,15 +118,28 @@ window.showGenome=function(id){
 
 function theater(){
   const t=document.getElementById("theater");
-  const rows=[...state.alerts].reverse().slice(-40);
-  t.innerHTML = rows.length? rows.map(a=>`
-    <div class="border-l-2 ${a.flag?"border-red-500":"border-gray-700"} pl-2 py-1">
+  const items=[
+    ...(state.alerts||[]).map(a=>({t:"txn", ts:a.ts, a})),
+    ...(state.artifacts||[]).map(a=>({t:"art", ts:a.ts, a})),
+  ].sort((x,y)=> new Date(y.ts)-new Date(x.ts)).slice(0,40);
+  if(!items.length){
+    t.innerHTML = `<div class="text-gray-600">No run yet - press "Run generation".</div>`;
+    return;
+  }
+  t.innerHTML = items.map(({t:ty,a})=>{
+    if(ty==="art"){
+      return `<div class="border-l-2 border-orange-400 pl-2 py-1">
+        <div class="flex justify-between"><span class="text-orange-300 font-semibold">
+          ${a.kind} · kill-chain artifact</span><span class="text-gray-600 text-[10px]">${a.attack_id||""}</span></div>
+        <div class="text-gray-300 italic mt-.5">"${a.text}"</div>
+        <div class="text-gray-600 text-[10px]">${a.src}</div></div>`;
+    }
+    return `<div class="border-l-2 ${a.flag?"border-red-500":"border-gray-700"} pl-2 py-1">
       <div class="flex justify-between"><span class="${a.is_fraud?"fraud font-semibold":"ok"}">
         ${a.is_fraud?"ATTACK":a.flag?"flagged":"clean"} · ₹${Number(a.amount).toLocaleString("en-IN")}</span>
         <span class="text-gray-600">${a.score}</span></div>
-      <div class="text-gray-500">${a.src} -> ${a.dst}${a.attack_id?` · ${a.attack_id}`:""}</div>
-    </div>`).join("") :
-    `<div class="text-gray-600">No run yet - press "Run generation".</div>`;
+      <div class="text-gray-500">${a.src} -> ${a.dst}${a.attack_id?` · ${a.attack_id}`:""}</div></div>`;
+  }).join("");
 }
 
 async function refresh(){

@@ -195,7 +195,8 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
         [h["fidelity_mean"] for h in history])), 4)
     result.total_legit_txns = sum(h["legit_txns"] for h in history)
     result.total_attack_txns = sum(h["attack_txns"] for h in history)
-    return result, {"p_all": p_all, "meta": meta, "X": X, "thr": thr}
+    return result, {"p_all": p_all, "meta": meta, "X": X, "thr": thr,
+                    "arts": arts}
 
 
 def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
@@ -220,6 +221,34 @@ def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
         if len(out) >= top_k:
             break
     return out
+
+
+def _artifact_feed(payload_extra: dict, top_k: int = 15) -> list[dict]:
+    """Recent attack artifacts (scam texts, transcripts, forged docs) for the
+    demo feed - the kill-chain content judges actually want to see."""
+    arts = payload_extra.get("arts")
+    if arts is None or not len(arts):
+        return []
+    fraud = arts[arts.label == 1] if "label" in arts.columns else arts
+    if not len(fraud):
+        return []
+    recent = fraud.sort_values("ts", ascending=False)  # newest first
+    per_kind_cap = 4
+    counts: dict[str, int] = {}
+    picked = []
+    for r in recent.itertuples():
+        k = str(r.kind)
+        if counts.get(k, 0) >= per_kind_cap:
+            continue
+        counts[k] = counts.get(k, 0) + 1
+        picked.append({
+            "ts": str(r.ts), "src": str(r.src), "kind": k,
+            "text": str(r.text)[:320], "attack_id": str(r.attack_id),
+        })
+        if len(picked) >= top_k:
+            break
+    picked.reverse()  # chronological in the feed
+    return picked
 
 
 def main() -> None:
@@ -253,6 +282,7 @@ def main() -> None:
     out_dir.mkdir(exist_ok=True)
     payload = result.to_json()
     payload["alerts"] = _alerts(extra)
+    payload["artifacts"] = _artifact_feed(extra)
     (out_dir / "latest.json").write_text(json.dumps(payload, indent=1))
     print(f"wrote {out_dir / 'latest.json'}")
 

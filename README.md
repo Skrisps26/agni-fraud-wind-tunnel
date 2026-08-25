@@ -8,12 +8,15 @@ scale, **defend** with a hardened detector - and let each pillar feed the next.
 flowchart LR
     A[Real anchor data<br/>IEEE-CIS / NPCI aggregates] --> T
     G[Fraud Genome<br/>attack taxonomy] --> F[Attack Foundry<br/>agent playbooks]
+
     F --> T[Digital Twin<br/>calibrated payment ecosystem]
     T --> D[Sentinel<br/>multimodal detector]
     D -- "blind spots" --> C[Critic]
     C -- "mutated playbooks + new vectors" --> G
     D -- "hardened" --> D
 ```
+
+![AGNI dashboard](docs/ui-preview.png)
 
 ## Why a wind tunnel
 
