@@ -1,0 +1,44 @@
+{
+  "id": "GEN-019",
+  "name": "Deepfake video KYC liveness bypass",
+  "playbook": "synthetic_kyc",
+  "summary": "Deepfake video passes liveness check during digital KYC; account used for wallet limits then bust-out.",
+  "rails": [
+    "wallet",
+    "upi"
+  ],
+  "surfaces": [
+    "onboarding_kyc"
+  ],
+  "capabilities": [
+    "deepfake_video",
+    "document_forgery"
+  ],
+  "ttps": [
+    "deepfake selfie video",
+    "GAN face generation",
+    "liveness spoof",
+    "limit exploitation"
+  ],
+  "observables": [
+    {
+      "name": "new_account_high_limit",
+      "description": "fresh KYC account with immediate high spend",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_identities": 2,
+    "dormancy_days": [
+      3,
+      8
+    ],
+    "burst_txns": 6,
+    "burst_spread_h": 8
+  },
+  "parent_ids": [
+    "GEN-004"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

@@ -1,0 +1,46 @@
+{
+  "id": "GEN-028",
+  "name": "Slow-drip salary account mimicry",
+  "playbook": "behavioral_mimicry",
+  "summary": "Compromised credentials replay victim's spend profile over 2 weeks before large siphon.",
+  "rails": [
+    "card",
+    "wallet"
+  ],
+  "surfaces": [
+    "behavioral"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
+  "ttps": [
+    "spend profile cloning",
+    "category/hour mimicry",
+    "low jitter amounts",
+    "end-of-period siphon"
+  ],
+  "observables": [
+    {
+      "name": "mimicry_then_siphon",
+      "description": "long benign mimicry then wallet transfer",
+      "signal_strength": 0.65
+    }
+  ],
+  "params": {
+    "n_victims": 3,
+    "duration_days": [
+      10,
+      16
+    ],
+    "txns_per_day": [
+      2,
+      3
+    ],
+    "amount_jitter": 0.12
+  },
+  "parent_ids": [
+    "GEN-006"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

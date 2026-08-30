@@ -1,0 +1,43 @@
+{
+  "id": "GEN-032",
+  "name": "Card testing pre-bust-out",
+  "playbook": "synthetic_kyc",
+  "summary": "Synthetic merchant account tests stolen cards with micro-charges before high-ticket bust-out burst.",
+  "rails": [
+    "card"
+  ],
+  "surfaces": [
+    "onboarding_kyc"
+  ],
+  "capabilities": [
+    "document_forgery",
+    "text_generation"
+  ],
+  "ttps": [
+    "micro-charge card test",
+    "MCC rotation",
+    "limit discovery",
+    "bust-out burst"
+  ],
+  "observables": [
+    {
+      "name": "test_charge_then_burst",
+      "description": "micro charges then high-ticket CNP from new merchant",
+      "signal_strength": 0.85
+    }
+  ],
+  "params": {
+    "n_identities": 2,
+    "dormancy_days": [
+      2,
+      6
+    ],
+    "burst_txns": 12,
+    "burst_spread_h": 3
+  },
+  "parent_ids": [
+    "GEN-004"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

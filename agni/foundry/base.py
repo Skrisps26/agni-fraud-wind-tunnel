@@ -79,13 +79,29 @@ class Playbook:
     def mutate(self, ctx: AttackContext) -> dict[str, Any]:
         """Return param overrides nudging the vector toward evasion."""
         det = float(ctx.feedback.get("det_rate", 0.0))
-        strength = 1.6 if det >= 0.5 else 1.15
+        blind = ctx.feedback.get("blind_spots", []) or []
+        strength = 2.0 if det < 0.5 else (1.6 if det < 0.7 else 1.15)
         out: dict[str, Any] = {}
         for key, val in self.p.items():
             if isinstance(val, tuple) and len(val) == 2 and all(
                     isinstance(x, (int, float)) for x in val):
                 lo, hi = val
-                out[key] = (round(lo * strength, 2), round(hi * strength, 2))
+                if key in ("amount_range", "base_amount", "cnp_amount"):
+                    out[key] = (lo, round(hi * (0.5 if "vel" in blind else 0.7), 0))
+                elif key in ("window_min", "duration_h", "harvest_delay_h",
+                             "dormancy_days", "duration_days", "burst_spread_h"):
+                    out[key] = (round(lo * strength, 1), round(hi * strength, 1))
+                else:
+                    out[key] = (round(lo * strength, 2), round(hi * strength, 2))
+        if "vel_10m" in blind or "vel_1h" in blind or "vel_24h" in blind:
+            out.setdefault("slow_velocity", True)
+        if "dst_fan_in" in blind or "dst_fwd_rate_24h" in blind:
+            out.setdefault("hop_chains", int(self.p.get("hop_chains", 2)) + 1)
+        if "amt_z_user" in blind:
+            for key in ("amount_range", "base_amount", "cnp_amount"):
+                if key in self.p and isinstance(self.p[key], (list, tuple)):
+                    lo, hi = self.p[key]
+                    out[key] = (round(lo * 0.3, 0), round(hi * 0.4, 0))
         return out
 
     # ------------------------------------------------------------- utilities

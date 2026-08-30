@@ -1,0 +1,49 @@
+{
+  "id": "GEN-024",
+  "name": "Fake ecommerce COD refund QR",
+  "playbook": "qr_collect_swap",
+  "summary": "Fake delivery app sends COD refund QR; victim scans at doorstep and authorizes debit.",
+  "rails": [
+    "upi"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "image_generation",
+    "text_generation"
+  ],
+  "ttps": [
+    "delivery context harvest",
+    "doorstep QR overlay",
+    "refund confusion script",
+    "instant mule debit"
+  ],
+  "observables": [
+    {
+      "name": "cod_refund_debit",
+      "description": "debit after recent COD purchase",
+      "signal_strength": 0.75
+    }
+  ],
+  "params": {
+    "n_victims": 5,
+    "harvest_delay_h": [
+      0.2,
+      1
+    ],
+    "cnp_txns": [
+      3,
+      6
+    ],
+    "cnp_amount": [
+      200,
+      5000
+    ]
+  },
+  "parent_ids": [
+    "GEN-009"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

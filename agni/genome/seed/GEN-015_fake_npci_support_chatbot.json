@@ -1,0 +1,49 @@
+{
+  "id": "GEN-015",
+  "name": "Fake NPCI support chatbot",
+  "playbook": "personalized_smishing",
+  "summary": "AI chatbot impersonates NPCI helpline; harvests UPI PIN context via fake dispute resolution flow.",
+  "rails": [
+    "upi"
+  ],
+  "surfaces": [
+    "customer_support"
+  ],
+  "capabilities": [
+    "text_generation",
+    "agent_orchestration"
+  ],
+  "ttps": [
+    "NPCI branding clone",
+    "chatbot dispute script",
+    "collect-request confusion",
+    "PIN harvest redirect"
+  ],
+  "observables": [
+    {
+      "name": "support_channel_smish",
+      "description": "SMS linking to fake NPCI portal after txn",
+      "signal_strength": 0.7
+    }
+  ],
+  "params": {
+    "n_victims": 5,
+    "harvest_delay_h": [
+      0.5,
+      2
+    ],
+    "cnp_txns": [
+      2,
+      4
+    ],
+    "cnp_amount": [
+      500,
+      3000
+    ]
+  },
+  "parent_ids": [
+    "GEN-005"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

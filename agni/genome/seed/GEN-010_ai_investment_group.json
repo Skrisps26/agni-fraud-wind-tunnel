@@ -1,7 +1,7 @@
 {
   "id": "GEN-010",
   "name": "AI-drafted investment-group pump scam",
-  "playbook": "digital_arrest",
+  "playbook": "investment_pump",
   "summary": "Greed-based variant: AI-run 'trading group' with fabricated profit screenshots and bot chatter convinces victims to move savings into a fake platform in escalating tranches over days.",
   "rails": ["upi", "wire"],
   "surfaces": ["social_engineering"],

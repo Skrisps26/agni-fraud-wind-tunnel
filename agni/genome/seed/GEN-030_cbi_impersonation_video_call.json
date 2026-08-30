@@ -1,0 +1,49 @@
+{
+  "id": "GEN-030",
+  "name": "CBI impersonation video call",
+  "playbook": "digital_arrest",
+  "summary": "Variant of digital arrest: deepfake CBI officer video call coerces 'verification transfers' over 48 hours.",
+  "rails": [
+    "upi",
+    "wire"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "deepfake_video",
+    "voice_clone",
+    "text_generation"
+  ],
+  "ttps": [
+    "CBI badge deepfake",
+    "FIR number fabrication",
+    "48h isolation",
+    "staged verification transfers"
+  ],
+  "observables": [
+    {
+      "name": "coerced_multi_day_drain",
+      "description": "escalating transfers during long video session",
+      "signal_strength": 0.85
+    }
+  ],
+  "params": {
+    "n_victims": 2,
+    "duration_h": [
+      24,
+      48
+    ],
+    "stages": 4,
+    "escalation": 1.8,
+    "base_amount": [
+      8000,
+      40000
+    ]
+  },
+  "parent_ids": [
+    "GEN-002"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

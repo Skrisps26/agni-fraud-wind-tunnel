@@ -29,8 +29,8 @@ class Config:
     benign_msg_cap: int = field(default_factory=lambda: _int("AGNI_BENIGN_MSG_CAP", 2500))
 
     # --- foundry ---
-    runs_per_genome: int = field(default_factory=lambda: _int("AGNI_RUNS_PER_GENOME", 4))
-    max_genomes: int = field(default_factory=lambda: _int("AGNI_MAX_GENOMES", 14))
+    runs_per_genome: int = field(default_factory=lambda: _int("AGNI_RUNS_PER_GENOME", 2))
+    max_genomes: int = field(default_factory=lambda: _int("AGNI_MAX_GENOMES", 50))
 
     # --- defense / loop ---
     fpr_budget: float = field(default_factory=lambda: _float("AGNI_FPR_BUDGET", 0.005))

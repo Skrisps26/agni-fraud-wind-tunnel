@@ -1,0 +1,48 @@
+{
+  "id": "GEN-023",
+  "name": "RuPay card testing funnel",
+  "playbook": "personalized_smishing",
+  "summary": "Smishing harvests RuPay debit details; attacker tests on low-value merchants before high-ticket drain.",
+  "rails": [
+    "card"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
+  "ttps": [
+    "RuPay-specific phishing",
+    "micro-charge validation",
+    "merchant category rotation",
+    "wallet cash-out"
+  ],
+  "observables": [
+    {
+      "name": "rupay_test_then_drain",
+      "description": "micro charges followed by large CNP",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_victims": 6,
+    "harvest_delay_h": [
+      2,
+      6
+    ],
+    "cnp_txns": [
+      4,
+      7
+    ],
+    "cnp_amount": [
+      1,
+      8000
+    ]
+  },
+  "parent_ids": [
+    "GEN-005"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

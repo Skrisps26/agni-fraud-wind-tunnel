@@ -1,0 +1,43 @@
+{
+  "id": "GEN-031",
+  "name": "Wallet-to-bank layering ring",
+  "playbook": "mule_recruitment",
+  "summary": "Organized mule ring: wallet deposits from victims layered through 5-hop NEFT chain before cash withdrawal.",
+  "rails": [
+    "wallet",
+    "wire"
+  ],
+  "surfaces": [
+    "infrastructure"
+  ],
+  "capabilities": [
+    "agent_orchestration"
+  ],
+  "ttps": [
+    "structured layering",
+    "timed NEFT hops",
+    "geographic dispersion",
+    "cash withdrawal endpoint"
+  ],
+  "observables": [
+    {
+      "name": "multi_hop_neft",
+      "description": "sequential NEFT through 4+ accounts",
+      "signal_strength": 0.9
+    }
+  ],
+  "params": {
+    "n_recruits": 10,
+    "payout": [
+      600,
+      1800
+    ],
+    "hop_chains": 5,
+    "layering_rounds": 3
+  },
+  "parent_ids": [
+    "GEN-008"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

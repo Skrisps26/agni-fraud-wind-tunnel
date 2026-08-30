@@ -1,0 +1,42 @@
+{
+  "id": "GEN-029",
+  "name": "Festival sale agentic gift drain",
+  "playbook": "agent_prompt_injection",
+  "summary": "During Diwali sales, injected listing tricks agent into bulk gift card purchase with hidden delivery address.",
+  "rails": [
+    "card"
+  ],
+  "surfaces": [
+    "agentic_checkout"
+  ],
+  "capabilities": [
+    "agent_orchestration",
+    "image_generation"
+  ],
+  "ttps": [
+    "festival listing SEO",
+    "hidden prompt injection",
+    "agent token reuse",
+    "code exfil"
+  ],
+  "observables": [
+    {
+      "name": "festival_agent_gift_burst",
+      "description": "agent-channel gift card spike during sale",
+      "signal_strength": 0.85
+    }
+  ],
+  "params": {
+    "n_attacks": 5,
+    "units": [
+      6,
+      10
+    ],
+    "unit_price": 2500
+  },
+  "parent_ids": [
+    "GEN-007"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

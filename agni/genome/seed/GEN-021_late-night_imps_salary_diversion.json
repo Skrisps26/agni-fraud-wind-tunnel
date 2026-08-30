@@ -1,0 +1,42 @@
+{
+  "id": "GEN-021",
+  "name": "Late-night IMPS salary diversion",
+  "playbook": "cfo_bec_wire",
+  "summary": "Compromised payroll email thread redirects salary IMPS to mule account during pay-day window.",
+  "rails": [
+    "wire"
+  ],
+  "surfaces": [
+    "infrastructure"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
+  "ttps": [
+    "payroll thread hijack",
+    "IMPS beneficiary swap",
+    "pay-day timing",
+    "single large transfer"
+  ],
+  "observables": [
+    {
+      "name": "payday_wire_anomaly",
+      "description": "unusual IMPS on salary day to new account",
+      "signal_strength": 0.75
+    }
+  ],
+  "params": {
+    "n_attacks": 2,
+    "amount_range": [
+      25000,
+      120000
+    ],
+    "split_max": 1,
+    "hour": 1
+  },
+  "parent_ids": [
+    "GEN-003"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

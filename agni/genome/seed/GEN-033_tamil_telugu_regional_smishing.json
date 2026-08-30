@@ -1,0 +1,49 @@
+{
+  "id": "GEN-033",
+  "name": "Tamil/Telugu regional smishing",
+  "playbook": "personalized_smishing",
+  "summary": "LLM-generated smishing in regional language referencing local bank and recent purchase.",
+  "rails": [
+    "card",
+    "upi"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
+  "ttps": [
+    "regional language SMS",
+    "local bank branding",
+    "purchase context harvest",
+    "dual-rail drain"
+  ],
+  "observables": [
+    {
+      "name": "regional_smish_pattern",
+      "description": "regional-language phishing SMS before card/UPI activity",
+      "signal_strength": 0.7
+    }
+  ],
+  "params": {
+    "n_victims": 6,
+    "harvest_delay_h": [
+      1,
+      5
+    ],
+    "cnp_txns": [
+      3,
+      6
+    ],
+    "cnp_amount": [
+      500,
+      6000
+    ]
+  },
+  "parent_ids": [
+    "GEN-005"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

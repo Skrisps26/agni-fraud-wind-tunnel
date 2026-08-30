@@ -105,3 +105,16 @@ class FusionDetector:
                 "precision": round(float(prec), 4), "recall": round(float(rec), 4),
                 "f1": round(float(f1), 4), "roc_auc": round(float(auc), 4),
                 "fpr": round(fpr, 5), "fpr_ok": bool(fpr <= fpr_budget)}
+
+    def explain(self, X: pd.DataFrame, row_idx: int, top_k: int = 3) -> list[dict]:
+        """SHAP-lite: top contributing features via importance * normalized value."""
+        if not hasattr(self.tab, "feature_importances_"):
+            return []
+        imp = self.tab.feature_importances_
+        feats = list(X.columns)
+        row = X.iloc[row_idx].to_numpy(dtype=float)
+        col_max = np.maximum(X.max().to_numpy(dtype=float), 1e-9)
+        contrib = imp * (row / col_max)
+        order = np.argsort(-contrib)[:top_k]
+        return [{"feature": feats[i], "contribution": round(float(contrib[i]), 4),
+                 "value": round(float(row[i]), 4)} for i in order]

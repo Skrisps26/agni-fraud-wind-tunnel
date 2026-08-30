@@ -1,7 +1,7 @@
 {
   "id": "GEN-009",
   "name": "QR deep-link swap collect-request scam",
-  "playbook": "personalized_smishing",
+  "playbook": "qr_collect_swap",
   "summary": "Attacker overlays fake QR posters / sends 'collect request' deep links posing as the merchant the user just paid; user authorizes a debit thinking it's a refund confirmation.",
   "rails": ["upi"],
   "surfaces": ["social_engineering"],

@@ -1,0 +1,49 @@
+{
+  "id": "GEN-035",
+  "name": "AI crypto pump group variant",
+  "playbook": "investment_pump",
+  "summary": "Telegram crypto pump group with AI-generated profit screenshots and fake exchange withdrawals.",
+  "rails": [
+    "upi",
+    "wallet"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "image_generation",
+    "deepfake_video",
+    "text_generation"
+  ],
+  "ttps": [
+    "Telegram bot chatter",
+    "fake exchange UI",
+    "bait withdrawal",
+    "escalating crypto deposits"
+  ],
+  "observables": [
+    {
+      "name": "crypto_deposit_escalation",
+      "description": "growing deposits to crypto-looking payee",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_victims": 4,
+    "duration_h": [
+      48,
+      96
+    ],
+    "stages": 5,
+    "escalation": 1.5,
+    "base_amount": [
+      3000,
+      20000
+    ]
+  },
+  "parent_ids": [
+    "GEN-010"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

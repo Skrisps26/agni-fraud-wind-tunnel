@@ -211,3 +211,99 @@ class PersonalizedSmishing(Playbook):
                 "cnp_txns": (max(2, clo), chi),
                 "cnp_amount": (alo, round(ahi * 0.45, 0)),
                 "mimic_recent_merchants": True}
+
+
+@register("qr_collect_swap")
+class QrCollectSwap(Playbook):
+    """QR/deep-link collect-request scam: victim authorizes debit thinking it's a refund."""
+
+    def execute(self, ctx: AttackContext) -> None:
+        rng, pop = ctx.rng, ctx.sim.pop
+        chain = pop.allocate_mule_chain(1, ctx.attack_id, 0)
+        mule = chain[0]
+        delay_lo, delay_hi = self.p.get("harvest_delay_h", (0.5, 2))
+        cnf_lo, cnf_hi = self.p.get("cnp_txns", (4, 8))
+        for v in _pick_victims(ctx, int(self.p.get("n_victims", 4))):
+            merch = [t for t in ctx.victim_history(v.id) if t.kind == "p2m"]
+            if not merch:
+                continue
+            last = merch[-1]
+            m = pop.merchant_by_id.get(last.merchant_id)
+            mname = m.name if m else "the merchant"
+            vpa = f"{mname.split()[0].lower()}{rng.integers(10, 99)}@paytm"
+            t0 = last.ts + timedelta(hours=self._rand_range(rng, (float(delay_lo), float(delay_hi))))
+            ctx.add_artifact(t0, v.id, "sms", (
+                "UPI Collect Request: Rs{amt} from {m}. "
+                "Enter UPI PIN to RECEIVE refund. "
+                "QR: upi://pay?pa={vpa}&am={amt}&tn=Refund").format(
+                amt=f"{last.amount:,.0f}", m=mname, vpa=vpa))
+            ctx.add_artifact(t0, v.id, "note",
+                             f"[QR overlay] fake poster at {mname} checkout; deep-link harvests merchant context")
+            n = int(rng.integers(int(cnf_lo), int(cnf_hi) + 1))
+            ts = t0 + timedelta(minutes=float(rng.integers(5, 45)))
+            for i in range(n):
+                amt = self._rand_range(rng, self.p.get("cnp_amount", (300, 4000)))
+                if i == 0:
+                    amt = min(amt, 11.0)  # test debit
+                ctx.add_txn(ts, v.id, mule.id, "p2p", "upi", amt, "upi",
+                            v.device_ids[0], v.city)
+                ts = ts + timedelta(minutes=float(rng.integers(3, 90)))
+
+    def mutate(self, ctx: AttackContext) -> dict:
+        det = float(ctx.feedback.get("det_rate", 0.0))
+        s = 2.0 if det < 0.5 else 1.4
+        dlo, dhi = self.p.get("harvest_delay_h", (0.5, 2))
+        alo, ahi = self.p.get("cnp_amount", (300, 4000))
+        return {"harvest_delay_h": (round(dlo * s, 1), round(dhi * s, 1)),
+                "cnp_amount": (alo, round(ahi * 0.5, 0)),
+                "cnp_txns": (int(self.p.get("cnp_txns", (4, 8))[0]), 3),
+                "test_debit_first": True}
+
+
+@register("investment_pump")
+class InvestmentPump(Playbook):
+    """AI-run trading group: fabricated P&L, bait withdrawals, escalating deposits."""
+
+    def execute(self, ctx: AttackContext) -> None:
+        rng = ctx.rng
+        chain = ctx.sim.pop.allocate_mule_chain(2, ctx.attack_id, 0)
+        l1, l2 = chain
+        dur_lo, dur_hi = self.p["duration_h"]
+        duration_h = self._rand_range(rng, (float(dur_lo), float(dur_hi)))
+        esc = float(self.p.get("escalation", 1.6))
+        stages = int(self.p.get("stages", 4))
+        group = f"AlphaTrade VIP-{rng.integers(100, 999)}"
+        for v in _pick_victims(ctx, int(self.p.get("n_victims", 3))):
+            base = self._rand_range(rng, self.p["base_amount"])
+            day = float(rng.integers(0, max(ctx.sim.days - 3, 1)))
+            h0 = int(rng.integers(10, 20))
+            ctx.add_artifact(ctx.sim.ts(day, h0), v.id, "sms", (
+                f"Welcome to {group}! Your AI trading bot earned Rs{base * 0.12:,.0f} today. "
+                "Screenshot attached - members withdrawing daily. Join VIP tier?"))
+            ctx.add_artifact(ctx.sim.ts(day, h0), v.id, "doc",
+                             f"[AI-generated P&L dashboard] {group}: +18.4% weekly; "
+                             "synthetic testimonial video of 'member' withdrawing Rs50,000")
+            ts = ctx.sim.ts(day, h0)
+            amt = base
+            for s_i in range(stages):
+                ctx.add_artifact(ts, v.id, "note",
+                                 f"[stage {s_i + 1}/{stages}] VIP tier deposit Rs{amt:,.0f} to platform wallet")
+                ctx.add_txn(ts, v.id, l1.id, "p2p", "upi", amt, "imps",
+                            v.device_ids[0], v.city)
+                if s_i == 0 and rng.random() < 0.6:  # bait withdrawal
+                    bait = round(amt * 0.15, 2)
+                    ctx.add_txn(ts + timedelta(hours=2), l1.id, v.id, "p2p", "upi",
+                                bait, "upi", f"d-agent-{ctx.attack_id}", v.city)
+                amt *= esc
+                ts = ts + timedelta(hours=duration_h / stages)
+            ctx.add_txn(ts, l1.id, l2.id, "p2p", "wire", amt / esc, "neft",
+                        f"d-agent-{ctx.attack_id}", "Mumbai")
+
+    def mutate(self, ctx: AttackContext) -> dict:
+        dur_lo, dur_hi = self.p["duration_h"]
+        blo, bhi = self.p["base_amount"]
+        return {"duration_h": (dur_lo, round(dur_hi * 2.0, 1)),
+                "escalation": round(float(self.p.get("escalation", 1.6)) * 0.8, 3),
+                "stages": int(self.p.get("stages", 4)) + 1,
+                "base_amount": (blo, round(bhi * 0.55, 0)),
+                "bait_withdrawal": True}

@@ -1,0 +1,50 @@
+{
+  "id": "GEN-011",
+  "name": "Hindi regional vishing UPI drain",
+  "playbook": "voice_relative_upi",
+  "summary": "Voice-clone scam in Hindi/regional dialect targeting tier-2 city users; caller poses as son/daughter with localized hospital names.",
+  "rails": [
+    "upi"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "voice_clone",
+    "text_generation"
+  ],
+  "ttps": [
+    "regional TTS voice clone",
+    "Hindi distress script",
+    "spoofed family contact",
+    "night-time urgency"
+  ],
+  "observables": [
+    {
+      "name": "regional_off_hours_burst",
+      "description": "late-night UPI to new payee",
+      "signal_strength": 0.75
+    }
+  ],
+  "params": {
+    "n_victims": 4,
+    "transfers": [
+      2,
+      5
+    ],
+    "amount_range": [
+      1500,
+      18000
+    ],
+    "window_min": [
+      20,
+      60
+    ],
+    "night_bias": 0.75
+  },
+  "parent_ids": [
+    "GEN-001"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

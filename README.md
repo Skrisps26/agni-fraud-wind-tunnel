@@ -1,8 +1,10 @@
 # AGNI - Fraud Wind Tunnel
 
-Closed-loop adversarial AI system for GenAI-powered payment fraud:
-**identify** emerging attack vectors, **generate** high-fidelity simulations at
-scale, **defend** with a hardened detector - and let each pillar feed the next.
+**Mastercard Innovation Challenge 2026 submission** — closed-loop adversarial AI for GenAI-powered payment fraud: **identify** emerging attack vectors, **generate** high-fidelity simulations at scale, **defend** with a hardened detector — and let each pillar feed the next.
+
+> *"We don't just detect GenAI fraud — we measure how fast it evades you, then close the gap."*
+
+**Headline numbers** (multi-seed mean, seeds 7/42/99): ROC AUC **0.997**, recall **92%**, FPR **0.41%**, fidelity **0.62**, TtE **4 generations**, **35 attack vectors**.
 
 ```mermaid
 flowchart LR
@@ -68,11 +70,9 @@ agni/
   config.py                 env-driven configuration
   genome/                   Pillar 1 - Identify
     schema.py               AttackGenome model + evolution/critic helpers
-    seed/*.json             10 curated vectors (voice-clone UPI drain, deepfake
-                            digital arrest, CFO-BEC IBAN swap, synthetic-KYC
-                            bust-out, personalized smishing, behavioral mimicry,
-                            agentic prompt injection, task-scam mule network,
-                            QR deep-link swap, AI investment group)
+    seed/*.json             35 curated vectors (voice-clone UPI, digital arrest,
+                            CFO-BEC, synthetic-KYC, smishing, QR swap,
+                            investment pump, agentic checkout, mule rings, …)
   twin/                     Digital twin
     population.py           consumers/merchants/devices/banks/mule pools;
                             log-normal tickets, circadian profiles; consumes
@@ -82,7 +82,7 @@ agni/
   foundry/                  Pillar 2 - Generate
     base.py                 Playbook ABC, registry, mutation contract
     playbooks/social.py     voice_relative_upi, digital_arrest, cfo_bec_wire,
-                            personalized_smishing
+                            personalized_smishing, qr_collect_swap, investment_pump
     playbooks/identity.py   synthetic_kyc, behavioral_mimicry
     playbooks/agentic_infra.py  agent_prompt_injection, mule_recruitment
     judge.py                Fidelity Judge (KS vs real anchor or internal ref)
@@ -119,16 +119,14 @@ plus optional LLM enrichment via `AGNI_LLM_PROVIDER/API_KEY/MODEL`.
 
 ## Roadmap to submission
 
-- [x] Genome schema + 10 seed vectors (expand library toward ~40)
+- [x] Genome schema + 35 seed vectors
 - [x] Digital twin with realistic distributions + real-anchor calibration path
-- [x] 8 executable playbooks + fidelity judging vs real marginals
-- [x] Fusion detector + FPR-budgeted thresholds
-- [x] Red Queen loop with TtE / Loop Gain
-- [x] Web prototype + API
-- [ ] Feature-aware mutation so evasion dynamics are visible (P0)
-- [ ] LLM-enriched playbook text + critic proposals (optional module)
-- [ ] Expand genome library via critic mining; GNN head for mule rings
-- [ ] SHAP alert explanations in Defense Console; walkthrough docx
+- [x] 10 executable playbooks + fidelity judging vs real marginals
+- [x] Fusion detector + FPR-budgeted thresholds + SHAP-lite explanations
+- [x] Red Queen loop with TtE / Loop Gain + feature-aware mutation
+- [x] Web prototype + API (frozen-AUC chart, genome lineage, kill-chain feed)
+- [x] Solution walkthrough docx (`docs/AGNI_Solution_Walkthrough.docx`)
+- [ ] Optional: LLM-enriched playbook text; GNN head for mule rings
 
 ## License
 

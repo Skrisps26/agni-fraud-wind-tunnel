@@ -1,0 +1,43 @@
+{
+  "id": "GEN-027",
+  "name": "Vendor impersonation BEC wire",
+  "playbook": "cfo_bec_wire",
+  "summary": "LLM drafts perfect vendor invoice thread; finance team wires to attacker IBAN believing it's a routine payment.",
+  "rails": [
+    "wire"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "text_generation",
+    "document_forgery"
+  ],
+  "ttps": [
+    "invoice PDF clone",
+    "thread continuity",
+    "IBAN swap",
+    "approval bypass"
+  ],
+  "observables": [
+    {
+      "name": "vendor_thread_wire",
+      "description": "wire matching vendor invoice pattern to new IBAN",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_attacks": 2,
+    "amount_range": [
+      150000,
+      600000
+    ],
+    "split_max": 3,
+    "hour": 11
+  },
+  "parent_ids": [
+    "GEN-003"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

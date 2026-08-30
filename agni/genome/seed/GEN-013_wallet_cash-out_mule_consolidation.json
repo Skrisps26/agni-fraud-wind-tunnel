@@ -1,0 +1,44 @@
+{
+  "id": "GEN-013",
+  "name": "Wallet cash-out mule consolidation",
+  "playbook": "mule_recruitment",
+  "summary": "Task-scam recruits funnel wallet balances through 4-hop chains before bank cash-out.",
+  "rails": [
+    "wallet",
+    "upi"
+  ],
+  "surfaces": [
+    "infrastructure"
+  ],
+  "capabilities": [
+    "text_generation",
+    "agent_orchestration"
+  ],
+  "ttps": [
+    "WhatsApp recruitment",
+    "activation fee deposit",
+    "multi-hop wallet forwarding",
+    "rapid cash-out"
+  ],
+  "observables": [
+    {
+      "name": "wallet_fan_in",
+      "description": "multiple sources to single wallet then wire",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_recruits": 8,
+    "payout": [
+      400,
+      1200
+    ],
+    "hop_chains": 3,
+    "layering_rounds": 2
+  },
+  "parent_ids": [
+    "GEN-008"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

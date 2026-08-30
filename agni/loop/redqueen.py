@@ -26,7 +26,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 
 from agni.config import Config, load
-from agni.defense.features import build_dataset
+from agni.defense.features import FEATURES, build_dataset
 from agni.defense.model import FusionDetector
 from agni.foundry.base import AttackContext, build_playbook
 from agni.foundry.judge import judge_all
@@ -50,6 +50,37 @@ class RedQueenResult:
         return asdict(self)
 
 
+def _feature_blind_spots(X: pd.DataFrame, meta: pd.DataFrame, p_all: np.ndarray,
+                         thr: float, genome_of: dict[str, str],
+                         rate_by_aid: dict[str, float]) -> dict[str, list[str]]:
+    """For under-detected genomes, identify features with low values on missed txns."""
+    hints: dict[str, list[str]] = {}
+    if not len(X) or not rate_by_aid:
+        return hints
+    flagged = p_all >= thr
+    atk_mask = meta["attack_id"].to_numpy() != ""
+    for aid, det_rate in rate_by_aid.items():
+        if det_rate >= 0.7:
+            continue
+        gid = genome_of.get(aid)
+        if not gid:
+            continue
+        mask = (meta["attack_id"].to_numpy() == aid)
+        missed = mask & ~flagged
+        caught = mask & flagged
+        if missed.sum() < 2 or caught.sum() < 2:
+            continue
+        low_feats = []
+        for feat in FEATURES:
+            m_val = float(X.loc[missed, feat].mean())
+            c_val = float(X.loc[caught, feat].mean())
+            if c_val > 0.5 and m_val < c_val * 0.6:
+                low_feats.append(feat)
+        if low_feats:
+            hints.setdefault(gid, []).extend(low_feats[:3])
+    return {k: list(dict.fromkeys(v))[:3] for k, v in hints.items()}
+
+
 def run_loop(cfg: Config | None = None, generations: int | None = None,
              verbose: bool = True) -> tuple[RedQueenResult, dict]:
     cfg = cfg or load()
@@ -69,6 +100,7 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
     frozen: FusionDetector | None = None
     streak = 0
     last_det_rate: dict[str, float] = {}
+    blind_spots: dict[str, list[str]] = {}
 
     for g in range(G):
         t0 = time.time()
@@ -83,7 +115,8 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
                 pb = build_playbook(genome)
             except KeyError:
                 continue
-            fb = {"det_rate": last_det_rate.get(genome.id, 0.0)}
+            fb = {"det_rate": last_det_rate.get(genome.id, 0.0),
+                  "blind_spots": blind_spots.get(genome.id, [])}
             for r in range(cfg.runs_per_genome):
                 aid = f"{genome.id}-g{g}r{r}"
                 genome_of[aid] = genome.id
@@ -166,25 +199,34 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
             if gid:
                 last_det_rate.setdefault(gid, []).append(float(hit))
         last_det_rate = {k: float(np.mean(v)) for k, v in last_det_rate.items()}
+        blind_spots = _feature_blind_spots(X, meta, p_all, thr, genome_of, rate_by_aid)
 
         nxt = []
-        probe_ctx = AttackContext(sim, gen_rng, "probe", {}, {})
+        probe_ctx = AttackContext(sim, gen_rng, "probe", {}, feedback={"det_rate": 0.0})
         for genome in genomes:
             dr = last_det_rate.get(genome.id)
-            if dr is not None and dr < 0.7 and len(nxt) < cfg.max_genomes - 1:
+            if dr is not None and dr < 0.85 and len(nxt) < cfg.max_genomes - 1:
                 try:
-                    ov = build_playbook(genome).mutate(probe_ctx)
-                    nxt.append(clone_with_params(genome, ov, g + 1))
+                    pb = build_playbook(genome)
+                    probe_ctx.feedback = {
+                        "det_rate": dr,
+                        "blind_spots": blind_spots.get(genome.id, []),
+                    }
+                    ov = pb.mutate(probe_ctx)
+                    mutated = clone_with_params(genome, ov, g + 1)
+                    mutated.id = f"{genome.id}-m{g + 1}"
+                    mutated.name = f"{genome.name} (mutated)"
+                    nxt.append(mutated)
                     continue
                 except Exception:
                     pass
             nxt.append(genome)
-        if (g + 1) % 3 == 0 and len(nxt) < cfg.max_genomes:
+        if (g + 1) % 2 == 0 and len(nxt) < cfg.max_genomes:
             weakest = min(last_det_rate, key=lambda k: last_det_rate[k],
                           default=None)
             base = next((x for x in nxt if x.id == weakest), None)
             if base is not None:
-                nxt.append(propose_variant(base, {}, g + 1))
+                nxt.append(propose_variant(base, None, g + 1))
         genomes = nxt[: cfg.max_genomes]
 
     # ---------------------------------------------------------------- wrap up
@@ -196,7 +238,7 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
     result.total_legit_txns = sum(h["legit_txns"] for h in history)
     result.total_attack_txns = sum(h["attack_txns"] for h in history)
     return result, {"p_all": p_all, "meta": meta, "X": X, "thr": thr,
-                    "arts": arts}
+                    "arts": arts, "defender": defender}
 
 
 def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
@@ -204,6 +246,8 @@ def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
     p_all = payload_extra["p_all"]
     meta = payload_extra["meta"]
     thr = payload_extra["thr"]
+    X = payload_extra.get("X")
+    defender = payload_extra.get("defender")
     idx = np.argsort(-p_all)[:top_k * 4]
     seen, out = set(), []
     for i in idx:
@@ -211,12 +255,16 @@ def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
         if row.txn_id in seen:
             continue
         seen.add(row.txn_id)
+        expl = []
+        if defender is not None and X is not None:
+            expl = defender.explain(X, i, top_k=3)
         out.append({
             "txn_id": str(row.txn_id), "score": round(float(p_all[i]), 4),
             "flag": bool(p_all[i] >= thr), "is_fraud": int(row.is_fraud),
             "src": str(row.src), "dst": str(row.dst),
             "amount": float(row.amount), "ts": str(row.ts),
             "attack_id": str(row.attack_id),
+            "explanations": expl,
         })
         if len(out) >= top_k:
             break

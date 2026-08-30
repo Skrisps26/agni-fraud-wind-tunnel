@@ -5,6 +5,7 @@ venv/
 .env
 runs/*.json
 !runs/.gitkeep
+!runs/benchmarks.json
 data/anchor/*.csv
 data/anchor/*.zip
 *.egg-info/

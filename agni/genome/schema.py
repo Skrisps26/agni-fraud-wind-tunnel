@@ -90,10 +90,41 @@ def clone_with_params(g: AttackGenome, overrides: dict, generation: int) -> Atta
     )
 
 
-def propose_variant(g: AttackGenome, overrides: dict, generation: int) -> AttackGenome:
+def propose_variant(g: AttackGenome, overrides: dict | None, generation: int) -> AttackGenome:
     """Critic-proposed sibling: same TTPs, different parameter regime."""
-    child = clone_with_params(g, overrides, generation)
+    regime = critic_regime_overrides(g)
+    merged = {**regime, **(overrides or {})}
+    child = clone_with_params(g, merged, generation)
     child.origin = "critic"
     child.id = f"{g.id}-v{generation}"
     child.name = f"{g.name} (critic variant)"
     return child
+
+
+def critic_regime_overrides(g: AttackGenome) -> dict:
+    """Parameter-regime shifts that broaden attack diversity for the Critic."""
+    overrides: dict[str, Any] = {}
+    p = g.params
+    for key in ("window_min", "duration_h", "harvest_delay_h", "dormancy_days",
+                "duration_days", "burst_spread_h"):
+        if key in p and isinstance(p[key], (list, tuple)) and len(p[key]) == 2:
+            lo, hi = float(p[key][0]), float(p[key][1])
+            overrides[key] = (round(lo * 1.4, 1), round(hi * 2.0, 1))
+    for key in ("amount_range", "base_amount", "cnp_amount"):
+        if key in p and isinstance(p[key], (list, tuple)) and len(p[key]) == 2:
+            lo, hi = float(p[key][0]), float(p[key][1])
+            overrides[key] = (lo, round(hi * 0.55, 0))
+    for key in ("transfers", "cnp_txns", "burst_txns", "stages"):
+        if key in p and isinstance(p[key], (list, tuple)) and len(p[key]) == 2:
+            lo, hi = int(p[key][0]), int(p[key][1])
+            overrides[key] = (max(1, lo - 1), hi + 1)
+        elif key in p and isinstance(p[key], (int, float)):
+            overrides[key] = int(p[key]) + 1
+    if "hop_chains" in p:
+        overrides["hop_chains"] = int(p["hop_chains"]) + 1
+    if "night_bias" in p:
+        overrides["night_bias"] = max(0.0, float(p["night_bias"]) - 0.2)
+    if "amount_jitter" in p:
+        overrides["amount_jitter"] = max(0.08, float(p["amount_jitter"]) * 0.6)
+    overrides["critic_regime"] = True
+    return overrides

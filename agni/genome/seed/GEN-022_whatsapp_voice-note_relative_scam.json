@@ -1,0 +1,50 @@
+{
+  "id": "GEN-022",
+  "name": "WhatsApp voice-note relative scam",
+  "playbook": "voice_relative_upi",
+  "summary": "AI-generated WhatsApp voice notes mimic relative; followed by UPI collect requests in chat.",
+  "rails": [
+    "upi"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "voice_clone",
+    "text_generation"
+  ],
+  "ttps": [
+    "voice note clone",
+    "WhatsApp thread",
+    "collect request in chat",
+    "urgency emoji script"
+  ],
+  "observables": [
+    {
+      "name": "voice_note_then_upi",
+      "description": "UPI transfer within minutes of messaging burst",
+      "signal_strength": 0.7
+    }
+  ],
+  "params": {
+    "n_victims": 5,
+    "transfers": [
+      1,
+      3
+    ],
+    "amount_range": [
+      3000,
+      15000
+    ],
+    "window_min": [
+      10,
+      30
+    ],
+    "night_bias": 0.4
+  },
+  "parent_ids": [
+    "GEN-001"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

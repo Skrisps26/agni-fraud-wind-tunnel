@@ -1,0 +1,48 @@
+{
+  "id": "GEN-017",
+  "name": "Card CNP velocity testing burst",
+  "playbook": "personalized_smishing",
+  "summary": "Harvested card credentials tested with micro-charges then rapid high-risk MCC spend burst.",
+  "rails": [
+    "card"
+  ],
+  "surfaces": [
+    "behavioral"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
+  "ttps": [
+    "card testing micro-txns",
+    "velocity ramp",
+    "high-risk MCC targeting",
+    "wallet offload"
+  ],
+  "observables": [
+    {
+      "name": "cnp_velocity_ramp",
+      "description": "escalating online card spend in short window",
+      "signal_strength": 0.9
+    }
+  ],
+  "params": {
+    "n_victims": 7,
+    "harvest_delay_h": [
+      1,
+      3
+    ],
+    "cnp_txns": [
+      5,
+      10
+    ],
+    "cnp_amount": [
+      200,
+      15000
+    ]
+  },
+  "parent_ids": [
+    "GEN-005"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

@@ -1,0 +1,42 @@
+{
+  "id": "GEN-018",
+  "name": "Agentic checkout gift-card drain",
+  "playbook": "agent_prompt_injection",
+  "summary": "Shopping agent with stored token buys bulk gift cards via prompt-injected merchant listing during festival sales.",
+  "rails": [
+    "card"
+  ],
+  "surfaces": [
+    "agentic_checkout"
+  ],
+  "capabilities": [
+    "agent_orchestration",
+    "text_generation"
+  ],
+  "ttps": [
+    "hidden listing directive",
+    "agentic token abuse",
+    "gift card code exfil",
+    "no step-up challenge"
+  ],
+  "observables": [
+    {
+      "name": "agent_channel_spend",
+      "description": "unusual agent-channel gift card purchase",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_attacks": 4,
+    "units": [
+      5,
+      8
+    ],
+    "unit_price": 3500
+  },
+  "parent_ids": [
+    "GEN-007"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

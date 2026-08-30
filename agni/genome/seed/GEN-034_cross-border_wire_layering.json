@@ -1,0 +1,43 @@
+{
+  "id": "GEN-034",
+  "name": "Cross-border wire layering",
+  "playbook": "cfo_bec_wire",
+  "summary": "Domestic wire to intermediary account, then SWIFT-style cross-border transfer to offshore mule.",
+  "rails": [
+    "wire"
+  ],
+  "surfaces": [
+    "infrastructure"
+  ],
+  "capabilities": [
+    "text_generation",
+    "document_forgery"
+  ],
+  "ttps": [
+    "domestic wire staging",
+    "offshore beneficiary",
+    "trade invoice cover",
+    "split tranches"
+  ],
+  "observables": [
+    {
+      "name": "domestic_then_offshore",
+      "description": "large domestic wire followed by international transfer pattern",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_attacks": 2,
+    "amount_range": [
+      200000,
+      800000
+    ],
+    "split_max": 4,
+    "hour": 14
+  },
+  "parent_ids": [
+    "GEN-003"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

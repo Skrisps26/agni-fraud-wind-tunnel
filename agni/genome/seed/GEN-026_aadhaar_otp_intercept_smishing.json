@@ -1,0 +1,48 @@
+{
+  "id": "GEN-026",
+  "name": "Aadhaar OTP intercept smishing",
+  "playbook": "personalized_smishing",
+  "summary": "SMS claims Aadhaar linking failed; fake portal harvests OTP and triggers unauthorized UPI debits.",
+  "rails": [
+    "upi"
+  ],
+  "surfaces": [
+    "onboarding_kyc"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
+  "ttps": [
+    "Aadhaar urgency SMS",
+    "fake UIDAI portal",
+    "OTP relay",
+    "immediate debit"
+  ],
+  "observables": [
+    {
+      "name": "aadhaar_smish_debit",
+      "description": "UPI debit after Aadhaar-themed SMS",
+      "signal_strength": 0.75
+    }
+  ],
+  "params": {
+    "n_victims": 6,
+    "harvest_delay_h": [
+      0.5,
+      2
+    ],
+    "cnp_txns": [
+      2,
+      5
+    ],
+    "cnp_amount": [
+      1000,
+      8000
+    ]
+  },
+  "parent_ids": [
+    "GEN-005"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

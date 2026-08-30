@@ -1,0 +1,44 @@
+{
+  "id": "GEN-020",
+  "name": "AI-forged PAN/Aadhaar document pack",
+  "playbook": "synthetic_kyc",
+  "summary": "Document-forgery pipeline generates consistent PAN+Aadhaar+address proof for synthetic identity onboarding.",
+  "rails": [
+    "upi",
+    "wallet"
+  ],
+  "surfaces": [
+    "onboarding_kyc"
+  ],
+  "capabilities": [
+    "document_forgery",
+    "image_generation"
+  ],
+  "ttps": [
+    "PAN card template fill",
+    "Aadhaar QR synthesis",
+    "utility bill edit",
+    "cross-document consistency"
+  ],
+  "observables": [
+    {
+      "name": "synthetic_doc_cluster",
+      "description": "onboarding docs with no prior bureau footprint",
+      "signal_strength": 0.7
+    }
+  ],
+  "params": {
+    "n_identities": 3,
+    "dormancy_days": [
+      10,
+      20
+    ],
+    "burst_txns": 7,
+    "burst_spread_h": 12
+  },
+  "parent_ids": [
+    "GEN-004"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}

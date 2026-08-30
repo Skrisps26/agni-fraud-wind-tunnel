@@ -1,0 +1,43 @@
+{
+  "id": "GEN-012",
+  "name": "NEFT/IMPS corporate wire diversion",
+  "playbook": "cfo_bec_wire",
+  "summary": "LLM-crafted vendor email thread with swapped NEFT beneficiary; targets mid-market firms during month-end settlement.",
+  "rails": [
+    "wire"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "text_generation",
+    "document_forgery"
+  ],
+  "ttps": [
+    "vendor tone mimicry",
+    "fake bank change notice",
+    "split RTGS tranches",
+    "month-end urgency"
+  ],
+  "observables": [
+    {
+      "name": "new_beneficiary_wire",
+      "description": "first wire to unseen corporate account",
+      "signal_strength": 0.85
+    }
+  ],
+  "params": {
+    "n_attacks": 3,
+    "amount_range": [
+      80000,
+      450000
+    ],
+    "split_max": 2,
+    "hour": 15
+  },
+  "parent_ids": [
+    "GEN-003"
+  ],
+  "origin": "seed",
+  "generation_born": 0
+}
