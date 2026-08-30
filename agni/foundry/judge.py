@@ -32,7 +32,8 @@ class FidelityReport:
     hour_similarity: float
     velocity_plausible: float
     text_diversity: float
-    overall: float
+    text_realism: float = 0.5
+    overall: float = 0.0
 
 
 def _legit_reference(df: pd.DataFrame) -> pd.DataFrame:
@@ -46,7 +47,7 @@ def judge_attack(df: pd.DataFrame, artifacts: pd.DataFrame,
                  anchor: dict | None = None) -> FidelityReport:
     atk = df[df.attack_id == attack_id]
     if atk.empty:
-        return FidelityReport(attack_id, genome_id, 0.0, 0.0, 1.0, 0.0, 0.0)
+        return FidelityReport(attack_id, genome_id, 0.0, 0.0, 1.0, 0.0, 0.5, 0.0)
 
     # --- amounts -------------------------------------------------------------
     if anchor is not None and len(anchor.get("amount", [])):
@@ -84,11 +85,33 @@ def judge_attack(df: pd.DataFrame, artifacts: pd.DataFrame,
     else:
         text_div = 0.5
 
-    overall = float(np.average([amount_sim, hour_sim, vel_ok, text_div],
-                               weights=[0.35, 0.25, 0.2, 0.2]))
+    text_realism = 0.5
+    if arts is not None and len(arts):
+        sample = arts[arts.attack_id == attack_id].text.head(1)
+        if len(sample):
+            text_realism = _llm_text_realism(str(sample.iloc[0]))
+
+    overall = float(np.average(
+        [amount_sim, hour_sim, vel_ok, text_div, text_realism],
+        weights=[0.30, 0.20, 0.15, 0.20, 0.15]))
     return FidelityReport(attack_id, genome_id, round(amount_sim, 4),
                           round(hour_sim, 4), round(vel_ok, 4),
-                          round(text_div, 4), round(overall, 4))
+                          round(text_div, 4), round(text_realism, 4),
+                          round(overall, 4))
+
+
+def _llm_text_realism(text: str) -> float:
+    try:
+        from agni.llm.client import chat_json, llm_available
+        from agni.llm.prompts import JUDGE_TEXT_SYSTEM
+        if not llm_available():
+            return 0.5
+        data = chat_json(JUDGE_TEXT_SYSTEM, text[:300], namespace="judge")
+        if data and "score" in data:
+            return min(max(float(data["score"]) / 5.0, 0.0), 1.0)
+    except Exception:
+        pass
+    return 0.5
 
 
 def judge_all(sim, genome_of: dict[str, str] | None = None,

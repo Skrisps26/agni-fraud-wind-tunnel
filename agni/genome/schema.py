@@ -59,9 +59,10 @@ class AttackGenome(BaseModel):
     ttps: list[str] = Field(default_factory=list)
     observables: list[Observable] = Field(default_factory=list)
     params: dict[str, Any] = Field(default_factory=dict)
-    origin: Literal["seed", "critic"] = "seed"
+    origin: Literal["seed", "critic", "scout"] = "seed"
     parent_ids: list[str] = Field(default_factory=list)
     generation_born: int = 0
+    tier: Literal["A", "B", "C"] = "B"
 
 
 SEED_DIR = Path(__file__).parent / "seed"

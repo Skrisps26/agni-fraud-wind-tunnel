@@ -3,9 +3,16 @@
   "name": "Personalized smishing refund phish -> CNP spend",
   "playbook": "personalized_smishing",
   "summary": "LLM reads leaked merchant/notification context and crafts an SMS referencing the victim's real last purchase and exact amount; harvested card details are monetized as card-not-present spend at gift-card/crypto MCCs.",
-  "rails": ["card", "wallet"],
-  "surfaces": ["social_engineering"],
-  "capabilities": ["text_generation"],
+  "rails": [
+    "card",
+    "wallet"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
   "ttps": [
     "personalization from real transaction metadata",
     "refund/chargeback pretext",
@@ -14,10 +21,37 @@
     "CNP burst at high-risk merchants"
   ],
   "observables": [
-    {"name": "new_device_online_card_spend", "description": "card used from unseen device fingerprint", "signal_strength": 0.9},
-    {"name": "high_risk_mcc_concentration", "description": "gift-card/crypto/resale merchants", "signal_strength": 0.8},
-    {"name": "sms_text_scam_signal", "description": "NLP classifier flags message content", "signal_strength": 0.7}
+    {
+      "name": "new_device_online_card_spend",
+      "description": "card used from unseen device fingerprint",
+      "signal_strength": 0.9
+    },
+    {
+      "name": "high_risk_mcc_concentration",
+      "description": "gift-card/crypto/resale merchants",
+      "signal_strength": 0.8
+    },
+    {
+      "name": "sms_text_scam_signal",
+      "description": "NLP classifier flags message content",
+      "signal_strength": 0.7
+    }
   ],
-  "params": {"n_victims": 6, "harvest_delay_h": [1, 4], "cnp_txns": [3, 6], "cnp_amount": [800, 9000]},
-  "origin": "seed"
+  "params": {
+    "n_victims": 6,
+    "harvest_delay_h": [
+      1,
+      4
+    ],
+    "cnp_txns": [
+      3,
+      6
+    ],
+    "cnp_amount": [
+      800,
+      9000
+    ]
+  },
+  "origin": "seed",
+  "tier": "A"
 }

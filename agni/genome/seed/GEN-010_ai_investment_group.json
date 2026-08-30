@@ -3,9 +3,18 @@
   "name": "AI-drafted investment-group pump scam",
   "playbook": "investment_pump",
   "summary": "Greed-based variant: AI-run 'trading group' with fabricated profit screenshots and bot chatter convinces victims to move savings into a fake platform in escalating tranches over days.",
-  "rails": ["upi", "wire"],
-  "surfaces": ["social_engineering"],
-  "capabilities": ["image_generation", "deepfake_video", "text_generation"],
+  "rails": [
+    "upi",
+    "wire"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "image_generation",
+    "deepfake_video",
+    "text_generation"
+  ],
   "ttps": [
     "synthetic testimonial videos of profitable members",
     "fake live-P&L dashboard screenshots",
@@ -14,10 +23,33 @@
     "consolidation into exchange-mule chain"
   ],
   "observables": [
-    {"name": "platform_deposit_escalation", "description": "growing deposits to single new corporate-looking payee", "signal_strength": 0.8},
-    {"name": "multi_day_coercion_span", "description": "deposits spread across many days", "signal_strength": 0.5}
+    {
+      "name": "platform_deposit_escalation",
+      "description": "growing deposits to single new corporate-looking payee",
+      "signal_strength": 0.8
+    },
+    {
+      "name": "multi_day_coercion_span",
+      "description": "deposits spread across many days",
+      "signal_strength": 0.5
+    }
   ],
-  "params": {"n_victims": 3, "duration_h": [12, 72], "stages": 4, "escalation": 1.6, "base_amount": [5000, 25000]},
+  "params": {
+    "n_victims": 3,
+    "duration_h": [
+      12,
+      72
+    ],
+    "stages": 4,
+    "escalation": 1.6,
+    "base_amount": [
+      5000,
+      25000
+    ]
+  },
   "origin": "seed",
-  "parent_ids": ["GEN-002"]
+  "parent_ids": [
+    "GEN-002"
+  ],
+  "tier": "A"
 }

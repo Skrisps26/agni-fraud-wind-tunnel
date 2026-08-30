@@ -1,133 +1,43 @@
-# AGNI - Fraud Wind Tunnel
+# AGNI — Triple-Agent Fraud Wind Tunnel
 
-**Mastercard Innovation Challenge 2026 submission** — closed-loop adversarial AI for GenAI-powered payment fraud: **identify** emerging attack vectors, **generate** high-fidelity simulations at scale, **defend** with a hardened detector — and let each pillar feed the next.
+**Mastercard Innovation Challenge 2026** — closed-loop adversarial AI for GenAI payment fraud.
 
 > *"We don't just detect GenAI fraud — we measure how fast it evades you, then close the gap."*
 
-**Headline numbers** (multi-seed mean, seeds 7/42/99): ROC AUC **0.997**, recall **92%**, FPR **0.41%**, fidelity **0.62**, TtE **4 generations**, **35 attack vectors**.
+## Triple-Agent Council
 
-```mermaid
-flowchart LR
-    A[Real anchor data<br/>IEEE-CIS / NPCI aggregates] --> T
-    G[Fraud Genome<br/>attack taxonomy] --> F[Attack Foundry<br/>agent playbooks]
+| Agent | Pillar | Role |
+|-------|--------|------|
+| **Scout** | Identify | Discovers new attack vectors from threat intel + blind spots |
+| **Forge** | Generate | LLM-enriches scam artifacts (DeepSeek / offline fallback) |
+| **Critic** | Evolve | Reasons about evasion; drives feature-aware mutation |
 
-    F --> T[Digital Twin<br/>calibrated payment ecosystem]
-    T --> D[Sentinel<br/>multimodal detector]
-    D -- "blind spots" --> C[Critic]
-    C -- "mutated playbooks + new vectors" --> G
-    D -- "hardened" --> D
-```
+**Calibrated on IEEE-CIS** (590K real transactions). **38 attack vectors** (13 tier-A playbooks).
 
-![AGNI dashboard](docs/ui-preview.png)
-
-## Why a wind tunnel
-
-Static fraud models decay: attackers adapt. AGNI measures that decay and fights
-it. Each Red Queen generation executes every attack vector against a digital
-twin of Indian retail payments, retrains Sentinel on the labeled stream, then
-evaluates the *previous* defender frozen against the new attacks. Two metrics
-fall out that static submissions cannot produce:
-
-- **Time-to-Evade (TtE)** - consecutive generations a frozen defender survives
-  (AUC >= threshold) before the evolving attacks evade it.
-- **Loop Gain** - dAUC delivered by each retrain cycle.
-
-Attack realism is scored by a **Fidelity Judge**: KS-similarity of amount and
-hour distributions, velocity plausibility, artifact diversity - measured
-against a **real public dataset**, not against ourselves (see below).
-
-## Real-data anchoring (no hand-waved distributions)
-
-The twin's statistical skeleton is *fitted*, not guessed:
-
-1. Drop `train_transaction.csv` ([IEEE-CIS/Vesta via Kaggle](https://www.kaggle.com/c/ieee-fraud-detection))
-   into `data/anchor/` (see `data/README.md`).
-2. `make calibrate` -> fits amount log-normal params, hour-of-day shape,
-   per-product ticket sizes; writes derived stats to `agni/twin/calibration.json`
-   (raw data never committed).
-3. The loop auto-detects calibration: population ticket sizes/hour profiles come
-   from fitted parameters, and the Fidelity Judge scores attacks against the
-   **real marginals**. Offline fallback (twin-internal reference) keeps
-   everything runnable without any download.
-
-## Quickstart
+**Headline results:** AUC **0.997**, Sentinel recall **90%**, static rules **1.6%**, TtE **4 gens**.
 
 ```bash
-make setup          # venv + pip install -e ".[dev]" (uses uv when available)
-make calibrate      # optional: fit real-anchor statistics
-make loop           # 5 generations, writes runs/latest.json
-make api            # dashboard at http://localhost:8000
-make test
+make setup
+cp ~/Downloads/train_transaction.csv data/anchor/   # one-time
+make calibrate
+make loop
+make api    # → http://localhost:8000
 ```
 
-CLI equivalents: `python -m agni.loop.redqueen --generations 5 --seed 7`.
-Everything runs offline and deterministically; no API keys required.
+## DeepSeek (optional)
 
-## Layout
-
-```
-agni/
-  config.py                 env-driven configuration
-  genome/                   Pillar 1 - Identify
-    schema.py               AttackGenome model + evolution/critic helpers
-    seed/*.json             35 curated vectors (voice-clone UPI, digital arrest,
-                            CFO-BEC, synthetic-KYC, smishing, QR swap,
-                            investment pump, agentic checkout, mule rings, …)
-  twin/                     Digital twin
-    population.py           consumers/merchants/devices/banks/mule pools;
-                            log-normal tickets, circadian profiles; consumes
-                            real-anchor calibration when present
-    rails.py                ledger, artifacts, background legit traffic
-    calibrate.py            fit marginals from IEEE-CIS anchor; judge reference
-  foundry/                  Pillar 2 - Generate
-    base.py                 Playbook ABC, registry, mutation contract
-    playbooks/social.py     voice_relative_upi, digital_arrest, cfo_bec_wire,
-                            personalized_smishing, qr_collect_swap, investment_pump
-    playbooks/identity.py   synthetic_kyc, behavioral_mimicry
-    playbooks/agentic_infra.py  agent_prompt_injection, mule_recruitment
-    judge.py                Fidelity Judge (KS vs real anchor or internal ref)
-  defense/                  Pillar 3 - Defend
-    features.py             velocity windows, expanding z-score, dst fan-in /
-                            forwarding rates, device novelty, risk flags
-    model.py                HistGradientBoosting + TF-IDF text head fusion;
-                            FPR-budgeted threshold policy
-  loop/redqueen.py          the closed loop + TtE / Loop Gain + CLI
-  server/main.py            FastAPI backend for the prototype UI
-web/index.html              three-pane dashboard (Genome Browser /
-                            Attack Theater / Defense Console)
-tests/                      smoke + calibration tests incl. mini end-to-end loop
-docs/walkthrough-outline.md source outline for the submission .docx
+```bash
+# .env
+AGNI_LLM_PROVIDER=deepseek
+AGNI_LLM_BASE_URL=https://api.deepseek.com
+AGNI_LLM_API_KEY=sk-...
+AGNI_LLM_MODEL=deepseek-chat
 ```
 
-## Configuration
+## Submission artifacts
 
-All optional (see `.env.example`): `AGNI_SEED`, `AGNI_CONSUMERS`, `AGNI_DAYS`,
-`AGNI_RUNS_PER_GENOME`, `AGNI_FPR_BUDGET` (default 0.005),
-`AGNI_TTE_THRESHOLD` (default AUC 0.90), `AGNI_USD_INR` (anchor fx),
-plus optional LLM enrichment via `AGNI_LLM_PROVIDER/API_KEY/MODEL`.
+- **Repo:** https://github.com/Skrisps26/agni-fraud-wind-tunnel
+- **Walkthrough:** `docs/AGNI_Solution_Walkthrough.docx`
+- **Demo:** `make api`
 
-## Safety and responsible use
-
-- Fully sandboxed simulation; **synthetic identities only**, no real PII.
-- Raw anchor CSVs are license-restricted and gitignored; only derived aggregate
-  statistics are committed.
-- Playbooks encode TTP-level strategy and template content - they are detection
-  research artifacts, not operational scam tooling.
-- No cloning of real individuals' voices or likenesses; transcripts are clearly
-  synthetic template output.
-- Intended use: training/stress-testing defenses, per the challenge brief.
-
-## Roadmap to submission
-
-- [x] Genome schema + 35 seed vectors
-- [x] Digital twin with realistic distributions + real-anchor calibration path
-- [x] 10 executable playbooks + fidelity judging vs real marginals
-- [x] Fusion detector + FPR-budgeted thresholds + SHAP-lite explanations
-- [x] Red Queen loop with TtE / Loop Gain + feature-aware mutation
-- [x] Web prototype + API (frozen-AUC chart, genome lineage, kill-chain feed)
-- [x] Solution walkthrough docx (`docs/AGNI_Solution_Walkthrough.docx`)
-- [ ] Optional: LLM-enriched playbook text; GNN head for mule rings
-
-## License
-
-MIT.
+See [SUBMISSION.md](SUBMISSION.md) for full evaluation table.

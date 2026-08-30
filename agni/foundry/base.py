@@ -26,8 +26,10 @@ class AttackContext:
     rng: np.random.Generator
     attack_id: str
     params: dict[str, Any]
-    feedback: dict[str, float] = field(default_factory=dict)
+    feedback: dict[str, Any] = field(default_factory=dict)
     touched_accounts: list[str] = field(default_factory=list)
+    genome_id: str = ""
+    playbook: str = ""
 
     # ---------------------------------------------------------------- helpers
     def add_txn(self, ts, src, dst, kind, rail, amount, channel,
@@ -41,9 +43,12 @@ class AttackContext:
             self.touched_accounts.append(src)
 
     def add_artifact(self, ts, src, kind, text) -> None:
+        from agni.llm.forge import forge_enrich
         from agni.twin.rails import Artifact
+        enriched, source = forge_enrich(kind, text, self.genome_id, self.playbook)
         self.sim.ledger.add_artifact(Artifact(
-            self.sim.ledger.next_art_id(), ts, src, kind, text, 1, self.attack_id))
+            self.sim.ledger.next_art_id(), ts, src, kind, enriched, 1, self.attack_id,
+            forge_source=source))
 
     def victim_history(self, victim_id: str):
         """Victim's legit transactions so far - used for personalization."""

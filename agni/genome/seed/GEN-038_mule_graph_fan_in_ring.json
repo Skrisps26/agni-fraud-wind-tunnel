@@ -1,0 +1,38 @@
+{
+  "id": "GEN-038",
+  "name": "Coordinated mule graph fan-in ring",
+  "playbook": "mule_graph_ring",
+  "summary": "Six or more victim accounts funnel transfers to a single mule sink within one hour \u2014 classic graph-shaped laundering signature.",
+  "rails": [
+    "upi",
+    "wallet"
+  ],
+  "surfaces": [
+    "infrastructure"
+  ],
+  "capabilities": [
+    "agent_orchestration"
+  ],
+  "ttps": [
+    "coordinated multi-source fan-in",
+    "single sink consolidation",
+    "sub-hour timing window",
+    "mule ring coordination"
+  ],
+  "observables": [
+    {
+      "name": "fan_in_velocity",
+      "description": "5+ unique sources to one dst in 1h",
+      "signal_strength": 0.95
+    }
+  ],
+  "params": {
+    "n_sources": 6,
+    "amount_range": [
+      800,
+      6000
+    ]
+  },
+  "origin": "seed",
+  "tier": "A"
+}

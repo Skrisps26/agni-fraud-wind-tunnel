@@ -1,17 +1,4 @@
-"""Red Queen engine - the closed loop that makes AGNI a wind tunnel.
-
-Per generation:
-  1. twin regenerates legitimate traffic,
-  2. Foundry executes every genome's playbook (mutated lineage carried over),
-  3. Fidelity Judge scores realism of each attack (vs REAL anchor when present),
-  4. Sentinel retrains on the labeled stream; metrics reported on a time holdout,
-  5. the PREVIOUS generation's defender is evaluated frozen on the new attacks
-     (this yields Time-to-Evade),
-  6. under-detected genomes are mutated toward evasion; the Critic occasionally
-     proposes parameter-regime siblings (diversity growth).
-
-Everything runs offline and deterministically under a single seed.
-"""
+"""Red Queen engine - the closed loop that makes AGNI a wind tunnel."""
 
 from __future__ import annotations
 
@@ -25,12 +12,15 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
+from agni.agents.critic import critic_brief
+from agni.agents.scout import scout_propose
 from agni.config import Config, load
+from agni.defense.baseline import evaluate_baseline, vector_det_rates
 from agni.defense.features import FEATURES, build_dataset
 from agni.defense.model import FusionDetector
 from agni.foundry.base import AttackContext, build_playbook
 from agni.foundry.judge import judge_all
-from agni.genome.schema import clone_with_params, load_genomes, propose_variant
+from agni.genome.schema import AttackGenome, clone_with_params, load_genomes, propose_variant
 from agni.twin.calibrate import load_anchor_sample, load_calibration
 from agni.twin.population import Population
 from agni.twin.rails import Simulation
@@ -40,6 +30,8 @@ from agni.twin.rails import Simulation
 class RedQueenResult:
     history: list[dict] = field(default_factory=list)
     genomes_final: list[dict] = field(default_factory=list)
+    agent_log: list[dict] = field(default_factory=list)
+    vector_det_rates: dict[str, float] = field(default_factory=dict)
     tte_generations: int = 0
     loop_gain_auc: float = 0.0
     fidelity_overall: float = 0.0
@@ -53,12 +45,10 @@ class RedQueenResult:
 def _feature_blind_spots(X: pd.DataFrame, meta: pd.DataFrame, p_all: np.ndarray,
                          thr: float, genome_of: dict[str, str],
                          rate_by_aid: dict[str, float]) -> dict[str, list[str]]:
-    """For under-detected genomes, identify features with low values on missed txns."""
     hints: dict[str, list[str]] = {}
     if not len(X) or not rate_by_aid:
         return hints
     flagged = p_all >= thr
-    atk_mask = meta["attack_id"].to_numpy() != ""
     for aid, det_rate in rate_by_aid.items():
         if det_rate >= 0.7:
             continue
@@ -81,6 +71,12 @@ def _feature_blind_spots(X: pd.DataFrame, meta: pd.DataFrame, p_all: np.ndarray,
     return {k: list(dict.fromkeys(v))[:3] for k, v in hints.items()}
 
 
+def _gid_from_aid(aid: str, genome_of: dict[str, str]) -> str:
+    if aid in genome_of:
+        return genome_of[aid]
+    return aid.rsplit("-g", 1)[0] if "-g" in aid else aid
+
+
 def run_loop(cfg: Config | None = None, generations: int | None = None,
              verbose: bool = True) -> tuple[RedQueenResult, dict]:
     cfg = cfg or load()
@@ -96,11 +92,20 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
         print(f"real-data anchoring active: {src}")
     genomes = load_genomes()
     result = RedQueenResult()
+    agent_log: list[dict] = []
     history: list[dict] = []
     frozen: FusionDetector | None = None
+    last_thr = 0.5
     streak = 0
     last_det_rate: dict[str, float] = {}
     blind_spots: dict[str, list[str]] = {}
+    last_vector_rates: dict[str, float] = {}
+    p_all = np.array([])
+    meta = pd.DataFrame()
+    X = pd.DataFrame()
+    thr = 0.5
+    arts = pd.DataFrame()
+    defender = FusionDetector(cfg.seed, cfg.text_blend_weight)
 
     for g in range(G):
         t0 = time.time()
@@ -108,7 +113,6 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
         sim = Simulation(pop, days=cfg.days)
         sim.background_traffic(gen_rng)
 
-        # ---- 2. attacks ---------------------------------------------------
         genome_of: dict[str, str] = {}
         for genome in genomes:
             try:
@@ -120,22 +124,19 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
             for r in range(cfg.runs_per_genome):
                 aid = f"{genome.id}-g{g}r{r}"
                 genome_of[aid] = genome.id
-                ctx = AttackContext(sim, np.random.default_rng(rng.integers(2 ** 62)),
-                                    aid, dict(genome.params), feedback=dict(fb))
+                ctx = AttackContext(
+                    sim, np.random.default_rng(rng.integers(2 ** 62)),
+                    aid, dict(genome.params), feedback=dict(fb),
+                    genome_id=genome.id, playbook=genome.playbook)
                 try:
                     pb.execute(ctx)
-                except Exception as exc:  # a broken vector must not kill the loop
+                except Exception as exc:
                     if verbose:
                         print(f"  [warn] {genome.id} failed: {exc!r}")
 
-        # ---- 3. fidelity --------------------------------------------------
         reports = judge_all(sim, genome_of, anchor=anchor)
-        fid_by_gid: dict[str, list[float]] = {}
-        for rep in reports:
-            fid_by_gid.setdefault(rep.genome_id, []).append(rep.overall)
         fid_mean = float(np.mean([r.overall for r in reports])) if reports else 0.0
 
-        # ---- 4. defend ----------------------------------------------------
         X, meta = build_dataset(sim)
         y = meta["is_fraud"].to_numpy()
         cut = int(len(meta) * 0.8)
@@ -146,34 +147,54 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
         arts_tr = arts[arts.ts < boundary].drop(columns=["ts"]) if len(arts) else None
         arts_te = arts[arts.ts >= boundary] if len(arts) else arts
 
-        defender = FusionDetector(cfg.seed, cfg.text_blend_weight)
-        defender.fit(X.iloc[:cut], y[:cut], arts_tr)
+        evasion = g > 0 and g <= cfg.evasion_gens and frozen is not None
         te_scores = defender.account_text_scores(arts_te if len(arts) else None)
-        p_test = defender.predict_proba(X.iloc[cut:], te_scores)
-        y_test = y[cut:]
-        thr = FusionDetector.choose_threshold(p_test, y_test, cfg.fpr_budget)
-        m_new = FusionDetector.evaluate(p_test, y_test, thr, cfg.fpr_budget)
 
-        # full-stream scores for per-attack feedback + alerts
+        if evasion:
+            p_test = frozen.predict_proba(X.iloc[cut:], te_scores)
+            thr = last_thr
+            m_new = FusionDetector.evaluate(p_test, y[cut:], thr, cfg.fpr_budget)
+            defender = frozen
+            agent_log.append({"agent": "critic", "gen": g,
+                              "message": f"[Evasion pressure gen {g}] Frozen defender held — "
+                                         "attacks mutating without retrain."})
+        else:
+            defender = FusionDetector(cfg.seed, cfg.text_blend_weight)
+            defender.fit(X.iloc[:cut], y[:cut], arts_tr)
+            te_scores = defender.account_text_scores(arts_te if len(arts) else None)
+            p_test = defender.predict_proba(X.iloc[cut:], te_scores)
+            y_test = y[cut:]
+            thr = FusionDetector.choose_threshold(p_test, y_test, cfg.fpr_budget)
+            m_new = FusionDetector.evaluate(p_test, y_test, thr, cfg.fpr_budget)
+            last_thr = thr
+
         all_scores = defender.account_text_scores(arts if len(arts) else None)
         p_all = defender.predict_proba(X, all_scores)
 
-        # ---- 5. frozen-drift / TtE ----------------------------------------
         frozen_eval = None
-        if frozen is not None:
+        if frozen is not None and not evasion:
             fp = frozen.predict_proba(X.iloc[cut:], te_scores)
-            frozen_eval = round(float(roc_auc_score(y_test, fp)), 4)
+            frozen_eval = round(float(roc_auc_score(y[cut:], fp)), 4)
             streak = streak + 1 if frozen_eval >= cfg.tte_threshold else 0
             result.tte_generations = max(result.tte_generations, streak)
-        frozen = defender  # freeze newest for next generation
+        elif evasion and frozen is not None:
+            fp = frozen.predict_proba(X.iloc[cut:], te_scores)
+            frozen_eval = round(float(roc_auc_score(y[cut:], fp)), 4)
+            streak = streak + 1 if frozen_eval >= cfg.tte_threshold else 0
+            result.tte_generations = max(result.tte_generations, streak)
 
-        # per-attack detection rate (full stream view, thresholded)
+        if not evasion:
+            frozen = defender
+
+        baseline = evaluate_baseline(sim)
+
         rate_by_aid: dict[str, float] = {}
         mask_atk = meta["attack_id"].to_numpy() != ""
         if mask_atk.any():
             sub = pd.DataFrame({"aid": meta["attack_id"][mask_atk],
                                 "hit": (p_all[mask_atk] >= thr)})
             rate_by_aid = sub.groupby("aid")["hit"].mean().to_dict()
+        last_vector_rates = vector_det_rates(meta, p_all, thr, genome_of)
 
         entry = {
             "generation": g, "legit_txns": int((y == 0).sum()),
@@ -183,29 +204,36 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
             "frozen_auc": frozen_eval,
             "fidelity_mean": round(fid_mean, 4),
             "n_attacks_run": len(genome_of),
+            "evasion_pressure": evasion,
+            "baseline_recall": baseline["baseline_recall"],
+            "baseline_precision": baseline["baseline_precision"],
+            "vector_det_rates": last_vector_rates,
             "secs": round(time.time() - t0, 1),
         }
         history.append(entry)
         if verbose:
             fe = "-" if frozen_eval is None else f"{frozen_eval:.3f}"
+            ev = " EVASION" if evasion else ""
             print(f"gen {g}: auc={m_new['roc_auc']:.3f} rec={m_new['recall']:.3f} "
                   f"fpr={m_new['fpr']:.4%} fidelity={fid_mean:.2f} "
-                  f"frozenAUC={fe} attacks={len(genome_of)} ({entry['secs']}s)")
+                  f"frozenAUC={fe} rules_rec={baseline['baseline_recall']:.2%}{ev} "
+                  f"({entry['secs']}s)")
 
-        # ---- 6. evolve -----------------------------------------------------
         last_det_rate = {}
         for aid, hit in rate_by_aid.items():
-            gid = genome_of.get(aid)
-            if gid:
-                last_det_rate.setdefault(gid, []).append(float(hit))
+            gid = _gid_from_aid(aid, genome_of)
+            last_det_rate.setdefault(gid, []).append(float(hit))
         last_det_rate = {k: float(np.mean(v)) for k, v in last_det_rate.items()}
         blind_spots = _feature_blind_spots(X, meta, p_all, thr, genome_of, rate_by_aid)
+
+        weakest = min(last_det_rate, key=last_det_rate.get, default=None) if last_det_rate else None
+        mutate_thresh = 0.92 if evasion else 0.85
 
         nxt = []
         probe_ctx = AttackContext(sim, gen_rng, "probe", {}, feedback={"det_rate": 0.0})
         for genome in genomes:
             dr = last_det_rate.get(genome.id)
-            if dr is not None and dr < 0.85 and len(nxt) < cfg.max_genomes - 1:
+            if dr is not None and dr < mutate_thresh and len(nxt) < cfg.max_genomes - 1:
                 try:
                     pb = build_playbook(genome)
                     probe_ctx.feedback = {
@@ -217,32 +245,43 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
                     mutated.id = f"{genome.id}-m{g + 1}"
                     mutated.name = f"{genome.name} (mutated)"
                     nxt.append(mutated)
+                    msg = critic_brief(genome, dr, blind_spots.get(genome.id, []),
+                                       frozen_eval, g)
+                    agent_log.append({"agent": "critic", "gen": g, "message": msg})
                     continue
                 except Exception:
                     pass
             nxt.append(genome)
+
         if (g + 1) % 2 == 0 and len(nxt) < cfg.max_genomes:
-            weakest = min(last_det_rate, key=lambda k: last_det_rate[k],
-                          default=None)
-            base = next((x for x in nxt if x.id == weakest), None)
+            base = next((x for x in nxt if x.id == weakest), None) if weakest else None
             if base is not None:
                 nxt.append(propose_variant(base, None, g + 1))
+
+        if (g + 1) % 2 == 0 and len(nxt) < cfg.max_genomes:
+            scout_genome, scout_msg = scout_propose(
+                g + 1, blind_spots, weakest, genomes)
+            agent_log.append({"agent": "scout", "gen": g, "message": scout_msg})
+            if scout_genome is not None:
+                nxt.append(scout_genome)
+
         genomes = nxt[: cfg.max_genomes]
 
-    # ---------------------------------------------------------------- wrap up
     result.history = history
     result.genomes_final = [json.loads(g.model_dump_json()) for g in genomes]
+    result.agent_log = agent_log
+    result.vector_det_rates = last_vector_rates
     result.loop_gain_auc = round(history[-1]["roc_auc"] - history[0]["roc_auc"], 4)
     result.fidelity_overall = round(float(np.mean(
         [h["fidelity_mean"] for h in history])), 4)
     result.total_legit_txns = sum(h["legit_txns"] for h in history)
     result.total_attack_txns = sum(h["attack_txns"] for h in history)
     return result, {"p_all": p_all, "meta": meta, "X": X, "thr": thr,
-                    "arts": arts, "defender": defender}
+                    "arts": arts, "defender": defender,
+                    "agent_log": agent_log, "vector_det_rates": last_vector_rates}
 
 
 def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
-    """Top scored suspicious txns from the last generation (demo feed)."""
     p_all = payload_extra["p_all"]
     meta = payload_extra["meta"]
     thr = payload_extra["thr"]
@@ -272,15 +311,13 @@ def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
 
 
 def _artifact_feed(payload_extra: dict, top_k: int = 15) -> list[dict]:
-    """Recent attack artifacts (scam texts, transcripts, forged docs) for the
-    demo feed - the kill-chain content judges actually want to see."""
     arts = payload_extra.get("arts")
     if arts is None or not len(arts):
         return []
     fraud = arts[arts.label == 1] if "label" in arts.columns else arts
     if not len(fraud):
         return []
-    recent = fraud.sort_values("ts", ascending=False)  # newest first
+    recent = fraud.sort_values("ts", ascending=False)
     per_kind_cap = 4
     counts: dict[str, int] = {}
     picked = []
@@ -289,13 +326,15 @@ def _artifact_feed(payload_extra: dict, top_k: int = 15) -> list[dict]:
         if counts.get(k, 0) >= per_kind_cap:
             continue
         counts[k] = counts.get(k, 0) + 1
+        forge = getattr(r, "forge_source", "template")
         picked.append({
             "ts": str(r.ts), "src": str(r.src), "kind": k,
             "text": str(r.text)[:320], "attack_id": str(r.attack_id),
+            "forge_source": forge,
         })
         if len(picked) >= top_k:
             break
-    picked.reverse()  # chronological in the feed
+    picked.reverse()
     return picked
 
 
@@ -325,6 +364,7 @@ def main() -> None:
     print(f"attacks executed across run: {result.total_attack_txns:,}")
     print(f"mean fidelity vs reference: {result.fidelity_overall}")
     print(f"genome count final: {len(result.genomes_final)}")
+    print(f"agent log entries: {len(result.agent_log)}")
 
     out_dir = Path(__file__).resolve().parents[2] / "runs"
     out_dir.mkdir(exist_ok=True)

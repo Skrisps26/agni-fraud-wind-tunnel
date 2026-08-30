@@ -2,29 +2,44 @@
 
 ## Summary
 
-AGNI is a **Fraud Wind Tunnel**: a closed-loop adversarial AI system that identifies 35 GenAI-powered payment fraud vectors, simulates them with fidelity scored against real IEEE-CIS data, and hardens a fusion detector through a Red Queen evolutionary loop.
+**AGNI** is a Triple-Agent Fraud Wind Tunnel: Scout discovers attacks, Forge generates realistic scams, Critic evolves evasion — all inside a Red Queen loop calibrated on **590K real IEEE-CIS transactions**.
 
-**Key novelty:** Time-to-Evade (TtE) metric — measures how many generations a frozen defender survives before evolving attacks bypass it.
+## Why this wins
 
-## Results
-
-- **35 attack vectors** across UPI, card, wire, wallet
-- **ROC AUC 0.997**, recall 92%, FPR 0.41%
-- **TtE: 4 generations** (adversarial robustness)
-- **Fidelity 0.62** vs real payment marginals
+- **Real GenAI:** DeepSeek-powered Scout/Forge/Critic (offline fallback included)
+- **Real data:** Fidelity scored vs IEEE-CIS marginals, not self-referential
+- **Measurable arms race:** TtE, frozen AUC decay, evasion-pressure generations
+- **Proof of value:** Sentinel **90%** recall vs static rules **1.6%**
+- **India-specific:** UPI, digital arrest, NPCI, agentic checkout — 38 vectors
 
 ## Links
 
 - **GitHub:** https://github.com/Skrisps26/agni-fraud-wind-tunnel
 - **Walkthrough:** `docs/AGNI_Solution_Walkthrough.docx`
-- **Demo:** `make setup && make api` → http://localhost:8000
+- **Demo:** `make setup && make calibrate && make api`
 
-## Three Pillars
+## Headline numbers
 
-1. **Identify** — Fraud Genome: 35 machine-readable attack vectors with TTPs and observables
-2. **Generate** — Attack Foundry + Digital Twin + Fidelity Judge (10 playbooks)
-3. **Defend** — Sentinel fusion detector with SHAP-lite explanations and FPR budget
+| Metric | Value |
+|--------|-------|
+| ROC AUC | 0.997 |
+| Sentinel recall | 90% |
+| Rules baseline recall | 1.6% |
+| FPR | 0.42% |
+| TtE | 4 generations |
+| Vectors | 38 |
 
-## India Relevance
+## Three pillars
 
-UPI voice-clone scams, digital arrest deepfakes, NPCI impersonation, QR collect-request confusion, agentic checkout abuse — tailored for GFF Mumbai audience.
+1. **Identify** — Scout Agent + 38 Fraud Genome vectors (tier A/B/C)
+2. **Generate** — 13 playbooks + Forge LLM artifacts + Fidelity Judge
+3. **Defend** — Sentinel fusion detector + SHAP-lite + rules baseline
+
+## DeepSeek setup (optional, ~$0.50/demo)
+
+```
+AGNI_LLM_PROVIDER=deepseek
+AGNI_LLM_BASE_URL=https://api.deepseek.com
+AGNI_LLM_API_KEY=sk-...
+AGNI_LLM_MODEL=deepseek-chat
+```

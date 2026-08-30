@@ -1,0 +1,27 @@
+[
+  {
+    "id": "fbi-ai-fraud-2025",
+    "title": "FBI IC3 AI-enabled fraud losses",
+    "text": "FBI IC3 reported $893M in AI-enabled fraud losses in 2025, driven by voice cloning, deepfake video calls, and LLM-drafted phishing at scale."
+  },
+  {
+    "id": "india-digital-arrest",
+    "title": "India digital arrest scam surge",
+    "text": "Indian cybercrime units report surge in 'digital arrest' scams: victims kept on marathon video calls with deepfake officials while coerced into UPI transfers."
+  },
+  {
+    "id": "npci-upi-fraud",
+    "title": "NPCI UPI collect-request abuse",
+    "text": "NPCI advisories warn of collect-request confusion attacks where victims authorize debits believing they are receiving refunds; QR overlay at merchant POS is rising."
+  },
+  {
+    "id": "agentic-commerce",
+    "title": "Agentic checkout attack surface",
+    "text": "Shopping agents with stored payment tokens create new fraud surface: prompt injection in merchant listings can trigger unauthorized gift-card purchases without step-up auth."
+  },
+  {
+    "id": "synthetic-kyc",
+    "title": "Synthetic identity KYC bypass",
+    "text": "GAN-generated faces and AI-edited documents increasingly pass remote liveness checks; bust-out follows dormancy period on newly onboarded wallet accounts."
+  }
+]

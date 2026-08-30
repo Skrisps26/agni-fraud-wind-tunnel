@@ -3,9 +3,18 @@
   "name": "Deepfake digital-arrest savings exfiltration",
   "playbook": "digital_arrest",
   "summary": "Victim joins a video call with an AI-generated 'police officer' claiming an Aadhaar-linked laundering case; kept under 'digital arrest' on camera for hours while transferring escalating 'verification' tranches to a safe-account chain.",
-  "rails": ["upi", "wire"],
-  "surfaces": ["social_engineering"],
-  "capabilities": ["deepfake_video", "voice_clone", "text_generation"],
+  "rails": [
+    "upi",
+    "wire"
+  ],
+  "surfaces": [
+    "social_engineering"
+  ],
+  "capabilities": [
+    "deepfake_video",
+    "voice_clone",
+    "text_generation"
+  ],
   "ttps": [
     "deepfake official identity with badge overlay",
     "synthetic police-station background",
@@ -14,10 +23,35 @@
     "layering through L1->L2 mule chain"
   ],
   "observables": [
-    {"name": "escalating_transfers_same_dst", "description": "growing amounts to one new payee", "signal_strength": 0.9},
-    {"name": "session_duration_outlier", "description": "transfers spread over many hours", "signal_strength": 0.6},
-    {"name": "micro_decoy_payments", "description": "tiny 'fee' payments alongside big ones", "signal_strength": 0.4}
+    {
+      "name": "escalating_transfers_same_dst",
+      "description": "growing amounts to one new payee",
+      "signal_strength": 0.9
+    },
+    {
+      "name": "session_duration_outlier",
+      "description": "transfers spread over many hours",
+      "signal_strength": 0.6
+    },
+    {
+      "name": "micro_decoy_payments",
+      "description": "tiny 'fee' payments alongside big ones",
+      "signal_strength": 0.4
+    }
   ],
-  "params": {"n_victims": 2, "duration_h": [6, 36], "stages": 3, "escalation": 2.2, "base_amount": [15000, 60000]},
-  "origin": "seed"
+  "params": {
+    "n_victims": 2,
+    "duration_h": [
+      6,
+      36
+    ],
+    "stages": 3,
+    "escalation": 2.2,
+    "base_amount": [
+      15000,
+      60000
+    ]
+  },
+  "origin": "seed",
+  "tier": "A"
 }

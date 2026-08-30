@@ -1,0 +1,50 @@
+{
+ "amount_usd": {
+  "median": 78.5601,
+  "sigma": 0.954,
+  "n": 590540
+ },
+ "consumer_median_inr": 6520.49,
+ "hour_weights": [
+  0.064,
+  0.05554,
+  0.04527,
+  0.03523,
+  0.02513,
+  0.01643,
+  0.01017,
+  0.00627,
+  0.00439,
+  0.0042,
+  0.00614,
+  0.01156,
+  0.02108,
+  0.0344,
+  0.04797,
+  0.05734,
+  0.06553,
+  0.06896,
+  0.07051,
+  0.07132,
+  0.07075,
+  0.07051,
+  0.06966,
+  0.06765
+ ],
+ "product_medians_usd": {
+  "C": 31.191,
+  "H": 50.0,
+  "R": 125.0,
+  "S": 35.0,
+  "W": 78.5
+ },
+ "fraud_rate_observed": 0.03499,
+ "rows_used": 590540,
+ "source": "train_transaction.csv",
+ "fitted_at": "2026-08-30T16:24:43+00:00",
+ "notes": [
+  "Vesta TransactionDT epoch/timezone undisclosed; hour shape reused only",
+  "train set oversamples fraud (~3.5%) vs production rates; not a base rate",
+  "fx assumption USD->INR = 83.0"
+ ]
+}

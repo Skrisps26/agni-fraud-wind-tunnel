@@ -3,57 +3,46 @@
     {
       "seed": 7,
       "tte": 4,
-      "loop_gain": -0.0016,
-      "fidelity": 0.6199,
-      "final_auc": 0.9975,
-      "final_recall": 0.939,
-      "final_fpr": 0.00428,
-      "final_precision": 0.9758,
-      "frozen_auc_last": 0.9933,
-      "genomes": 36,
-      "attack_txns": 7356
+      "fidelity": 0.5704,
+      "final_auc": 0.9977,
+      "final_recall": 0.896,
+      "final_fpr": 0.00392,
+      "baseline_recall": 0.0166,
+      "frozen_auc_min": 0.9919,
+      "agent_log_entries": 13
     },
     {
       "seed": 42,
       "tte": 4,
-      "loop_gain": -0.001,
-      "fidelity": 0.6246,
-      "final_auc": 0.997,
-      "final_recall": 0.9217,
-      "final_fpr": 0.00312,
-      "final_precision": 0.9815,
-      "frozen_auc_last": 0.994,
-      "genomes": 36,
-      "attack_txns": 7742
+      "fidelity": 0.569,
+      "final_auc": 0.9965,
+      "final_recall": 0.9106,
+      "final_fpr": 0.00488,
+      "baseline_recall": 0.0212,
+      "frozen_auc_min": 0.9916,
+      "agent_log_entries": 15
     },
     {
       "seed": 99,
       "tte": 4,
-      "loop_gain": -0.0018,
-      "fidelity": 0.6237,
-      "final_auc": 0.9954,
-      "final_recall": 0.9058,
-      "final_fpr": 0.00484,
-      "final_precision": 0.9746,
-      "frozen_auc_last": 0.9923,
-      "genomes": 36,
-      "attack_txns": 7435
+      "fidelity": 0.5696,
+      "final_auc": 0.9962,
+      "final_recall": 0.8937,
+      "final_fpr": 0.00388,
+      "baseline_recall": 0.0102,
+      "frozen_auc_min": 0.992,
+      "agent_log_entries": 15
     }
   ],
+  "calibrated": true,
   "summary": {
     "mean": {
       "tte": 4.0,
-      "loop_gain": -0.0015,
-      "fidelity": 0.6227,
-      "final_auc": 0.9966,
-      "final_recall": 0.9222,
-      "final_fpr": 0.0041,
-      "final_precision": 0.9773
-    },
-    "std": {
-      "final_auc": 0.0009,
-      "final_recall": 0.0136,
-      "final_fpr": 0.0007
+      "fidelity": 0.5697,
+      "final_auc": 0.9968,
+      "final_recall": 0.9001,
+      "final_fpr": 0.0042,
+      "baseline_recall": 0.016
     }
   }
 }

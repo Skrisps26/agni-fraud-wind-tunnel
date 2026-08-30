@@ -37,11 +37,13 @@ class Config:
     tte_threshold: float = field(default_factory=lambda: _float("AGNI_TTE_THRESHOLD", 0.90))
     text_blend_weight: float = field(default_factory=lambda: _float("AGNI_TEXT_WEIGHT", 0.20))
     generations: int = field(default_factory=lambda: _int("AGNI_GENERATIONS", 5))
+    evasion_gens: int = field(default_factory=lambda: _int("AGNI_EVASION_GENS", 2))
 
     # --- optional LLM enrichment ---
     llm_provider: str = field(default_factory=lambda: os.environ.get("AGNI_LLM_PROVIDER", "none"))
     llm_api_key: str = field(default_factory=lambda: os.environ.get("AGNI_LLM_API_KEY", ""))
     llm_model: str = field(default_factory=lambda: os.environ.get("AGNI_LLM_MODEL", ""))
+    llm_base_url: str = field(default_factory=lambda: os.environ.get("AGNI_LLM_BASE_URL", ""))
 
     @property
     def llm_enabled(self) -> bool:

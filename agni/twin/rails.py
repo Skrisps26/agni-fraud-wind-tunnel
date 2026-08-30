@@ -41,6 +41,7 @@ class Artifact:
     text: str
     label: int           # 1 = attack artifact, 0 = benign
     attack_id: str = ""
+    forge_source: str = "template"  # template | llm
 
 
 @dataclass
@@ -77,6 +78,7 @@ class Ledger:
         return pd.DataFrame([{
             "art_id": a.art_id, "ts": a.ts, "src": a.src, "kind": a.kind,
             "text": a.text, "label": a.label, "attack_id": a.attack_id,
+            "forge_source": a.forge_source,
         } for a in self.artifacts])
 
 

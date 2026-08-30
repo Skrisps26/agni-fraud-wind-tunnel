@@ -3,9 +3,17 @@
   "name": "Prompt-injected agentic-checkout gift-card fraud",
   "playbook": "agent_prompt_injection",
   "summary": "Merchant listing hides white-on-white and alt-text directives that hijack the victim's shopping agent; the agent holds a legitimate agentic token and purchases gift cards delivered to attacker-controlled addresses - no credential theft required.",
-  "rails": ["card"],
-  "surfaces": ["agentic_checkout"],
-  "capabilities": ["agent_orchestration", "text_generation", "image_generation"],
+  "rails": [
+    "card"
+  ],
+  "surfaces": [
+    "agentic_checkout"
+  ],
+  "capabilities": [
+    "agent_orchestration",
+    "text_generation",
+    "image_generation"
+  ],
   "ttps": [
     "indirect prompt injection in product listing metadata",
     "abuse of stored agentic token with standing permission",
@@ -13,10 +21,30 @@
     "value forwarded to mule within hours"
   ],
   "observables": [
-    {"name": "agent_channel_first_use", "description": "first agent-channel txn on account", "signal_strength": 0.8},
-    {"name": "listing_text_anomaly", "description": "NLP flags directive-like content in listing", "signal_strength": 0.75},
-    {"name": "gift_card_burst", "description": "high-value gift-card purchase then forward", "signal_strength": 0.7}
+    {
+      "name": "agent_channel_first_use",
+      "description": "first agent-channel txn on account",
+      "signal_strength": 0.8
+    },
+    {
+      "name": "listing_text_anomaly",
+      "description": "NLP flags directive-like content in listing",
+      "signal_strength": 0.75
+    },
+    {
+      "name": "gift_card_burst",
+      "description": "high-value gift-card purchase then forward",
+      "signal_strength": 0.7
+    }
   ],
-  "params": {"n_attacks": 3, "units": [4, 6], "unit_price": 4000},
-  "origin": "seed"
+  "params": {
+    "n_attacks": 3,
+    "units": [
+      4,
+      6
+    ],
+    "unit_price": 4000
+  },
+  "origin": "seed",
+  "tier": "A"
 }

@@ -1,0 +1,41 @@
+{
+  "id": "GEN-037",
+  "name": "OTT subscription mandate micro-debit trap",
+  "playbook": "subscription_mandate_trap",
+  "summary": "Fake auto-renewal SMS harvests credentials; attacker sets up recurring micro-debits mimicking OTT/utility mandates below alert thresholds.",
+  "rails": [
+    "upi"
+  ],
+  "surfaces": [
+    "infrastructure"
+  ],
+  "capabilities": [
+    "text_generation"
+  ],
+  "ttps": [
+    "fake OTT renewal SMS",
+    "recurring micro-debit pattern",
+    "long-horizon slow drain",
+    "below-threshold amounts"
+  ],
+  "observables": [
+    {
+      "name": "recurring_micro_debits",
+      "description": "same payee micro-debits over weeks",
+      "signal_strength": 0.65
+    }
+  ],
+  "params": {
+    "n_victims": 5,
+    "days": [
+      14,
+      28
+    ],
+    "micro_amount": [
+      49,
+      299
+    ]
+  },
+  "origin": "seed",
+  "tier": "A"
+}

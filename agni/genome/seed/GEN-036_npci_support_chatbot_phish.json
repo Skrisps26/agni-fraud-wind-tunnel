@@ -1,0 +1,39 @@
+{
+  "id": "GEN-036",
+  "name": "NPCI support chatbot collect-request phish",
+  "playbook": "npci_chatbot_phish",
+  "summary": "Multi-turn fake NPCI dispute chatbot coerces victim into authorizing UPI collect-request debits believing they are blocking fraud.",
+  "rails": [
+    "upi"
+  ],
+  "surfaces": [
+    "customer_support"
+  ],
+  "capabilities": [
+    "text_generation",
+    "agent_orchestration"
+  ],
+  "ttps": [
+    "NPCI branding clone in chat UI",
+    "multi-turn social engineering",
+    "collect-request confusion exploit",
+    "RBI verification pretext"
+  ],
+  "observables": [
+    {
+      "name": "chat_then_collect",
+      "description": "UPI debit after support chat session",
+      "signal_strength": 0.8
+    }
+  ],
+  "params": {
+    "n_victims": 4,
+    "amount_range": [
+      1500,
+      12000
+    ],
+    "chat_turns": 3
+  },
+  "origin": "seed",
+  "tier": "A"
+}
