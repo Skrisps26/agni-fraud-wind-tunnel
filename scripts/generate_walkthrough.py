@@ -109,8 +109,9 @@ def main() -> None:
 
     doc.add_heading("6. Feasibility & GFF demo (90s)", 1)
     add_para(doc, (
-        "Open the hosted URL. Rubric strip = four criteria. Agent Council = Scout/Critic. "
-        "Mule SVG = unique-src fan-in. Heatmap = held-out miss (red) vs caught (green). "
+        "Open https://agni-fraud-wind-tunnel.onrender.com (first load may take ~1 min). "
+        "Identify = atlas. Generate/Defend replay = kill chain vs straw rules. "
+        "Loop = Scout/Critic. Defend = holdout / recall@base / TtE. "
         "Agent Pay: GEN-007 listing injection, stored agentic token, no step-up. "
         "Governance: synthetic IDs; raw Vesta CSV never redistributed."
     ))
