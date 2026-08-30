@@ -3,105 +3,135 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>AGNI — Fraud Wind Tunnel</title>
+<title>AGNI WIND TUNNEL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="/static/app.css"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 </head>
 <body>
-<header class="top">
-  <div class="brand">
-    <h1>AGNI <span>WIND TUNNEL</span></h1>
-    <span class="sub">closed-loop GenAI payment fraud · red team / blue team</span>
+<div class="shell">
+  <div class="ticker">
+    <i class="led" aria-hidden="true"></i>
+    <div class="roll" id="ticker">AGNI · FRAUD WIND TUNNEL · IDENTIFY GENERATE DEFEND · RED QUEEN LOOP · </div>
   </div>
-  <div class="rubric" id="rubric"></div>
-  <div class="actions">
-    <span class="badge" id="calBadge">anchor</span>
-    <span class="badge" id="llmBadge">llm off</span>
-    <button class="btn" id="runBtn">Run generation</button>
+
+  <header class="mast">
+    <div>
+      <div class="word">AGNI<small>FRAUD WIND TUNNEL // GFF 2026</small></div>
+    </div>
+    <div class="rubric" id="rubric"></div>
+    <div class="ops">
+      <span class="clock num" id="clock"></span>
+      <span class="tag" id="calBadge">IEEE</span>
+      <span class="tag" id="llmBadge">LLM</span>
+      <button class="fire" id="runBtn" type="button">Run gen</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Panels">
+    <button type="button" data-pane="identify" class="on">Identify</button>
+    <button type="button" data-pane="generate">Generate</button>
+    <button type="button" data-pane="loop">Loop</button>
+    <button type="button" data-pane="defend">Defend</button>
+  </nav>
+
+  <div class="workspace">
+    <section class="pane show" id="pane-identify">
+      <div class="ph">Identify <span>genome</span></div>
+      <input class="search" id="gSearch" placeholder="ID / rail / surface" autocomplete="off"/>
+      <ul class="glist" id="genomeList"></ul>
+      <div class="gdetail" id="genomeDetail">Select a vector. Tier A = dedicated playbook.</div>
+    </section>
+
+    <section class="pane" id="pane-generate">
+      <div class="ph">Generate <span>kill chain</span></div>
+      <svg id="mule" viewBox="0 0 720 150" role="img" aria-label="Mule ring"></svg>
+      <div class="stream" id="theater"></div>
+    </section>
+
+    <section class="pane" id="pane-loop">
+      <div class="ph">Loop <span>council</span></div>
+      <div class="feed" id="council"></div>
+    </section>
+
+    <section class="pane" id="pane-defend">
+      <div class="ph">Defend <span>sentinel</span></div>
+      <div class="stats" id="cards"></div>
+      <div class="charts">
+        <canvas id="armsChart" height="120"></canvas>
+        <canvas id="baselineChart" height="96"></canvas>
+      </div>
+      <div class="heat" id="heatmap"></div>
+      <div class="err" id="runlog"></div>
+    </section>
   </div>
-</header>
 
-<main class="grid">
-  <section class="col">
-    <h2>Identify · Genome</h2>
-    <input class="search" id="gSearch" placeholder="filter id, rail, surface"/>
-    <ul class="glist" id="genomeList"></ul>
-    <div class="gdetail" id="genomeDetail">Select a vector.</div>
-  </section>
-
-  <section class="col">
-    <h2>Generate · Attack theater</h2>
-    <svg id="mule" viewBox="0 0 640 140" aria-label="Mule ring"></svg>
-    <div class="theater" id="theater"></div>
-  </section>
-
-  <section class="col">
-    <h2>Loop · Agent council</h2>
-    <div class="feed" id="council"></div>
-  </section>
-
-  <section class="col">
-    <h2>Defend · Sentinel</h2>
-    <div class="metrics" id="cards"></div>
-    <canvas id="armsChart" height="110"></canvas>
-    <canvas id="baselineChart" height="90"></canvas>
-    <div class="heat" id="heatmap"></div>
-    <div class="log" id="runlog"></div>
-  </section>
-</main>
-<footer class="foot">Sandbox · synthetic identities · TTP-level playbooks · IEEE-CIS derived stats only</footer>
+  <footer class="rail">SYNTHETIC IDS ONLY · TTP RESEARCH · IEEE-CIS DERIVED STATS · NO RAW PII</footer>
+</div>
 
 <script>
 let state = {history:[], genomes:[], alerts:[], artifacts:[], agent_log:[], vector_det_rates:{},
-  mule_graph:{}, tte_generations:0, loop_gain_auc:0, fidelity_mean:0, baseline_recall:null,
-  calibrated:false, llm_enabled:false};
+  mule_graph:{}, tte_generations:0, loop_gain_auc:0, fidelity_mean:0, calibrated:false, llm_enabled:false};
+
+function tick(){
+  const d=new Date();
+  document.getElementById("clock").textContent=d.toISOString().replace("T"," ").slice(0,19)+"Z";
+}
+setInterval(tick,1000); tick();
+
+function chartDefaults(){
+  Chart.defaults.color="#8b93a7";
+  Chart.defaults.borderColor="#1a2138";
+  Chart.defaults.font.family="'IBM Plex Mono', monospace";
+  Chart.defaults.font.size=10;
+}
 
 function rubric(){
-  const h=state.history, last=h[h.length-1]||{};
+  const last=(state.history||[])[state.history.length-1]||{};
   const cells=[
-    ["Identify",(state.genomes||[]).length+" vec"],
-    ["Generate",(state.fidelity_mean||"—")],
-    ["Defend", last.roc_auc ?? "—"],
-    ["Loop","TtE "+(state.tte_generations||0)],
+    ["IDENTIFY",(state.genomes||[]).length+" VEC"],
+    ["FIDELITY", state.fidelity_mean!=null && state.fidelity_mean!=="" ? Number(state.fidelity_mean).toFixed(2) : "—"],
+    ["AUC", last.roc_auc ?? "—"],
+    ["TtE", state.tte_generations ?? 0],
   ];
   document.getElementById("rubric").innerHTML=cells.map(([k,v])=>
-    `<div><kbd>${k}</kbd><b class="num">${v}</b></div>`).join("");
+    `<div><span class="k">${k}</span><div class="v num">${v}</div></div>`).join("");
 }
 
 function cards(){
   const last=(state.history||[])[state.history.length-1]||{};
   const items=[
     ["ROC AUC", last.roc_auc ?? "—"],
-    ["Recall", last.recall ?? "—"],
+    ["RECALL", last.recall ?? "—"],
     ["FPR", last.fpr!=null?(last.fpr*100).toFixed(2)+"%":"—"],
-    ["Rules rec", last.baseline_recall!=null?(last.baseline_recall*100).toFixed(1)+"%":"—"],
+    ["RULES", last.baseline_recall!=null?(last.baseline_recall*100).toFixed(1)+"%":"—"],
   ];
   document.getElementById("cards").innerHTML=items.map(([k,v])=>
-    `<div><kbd>${k}</kbd><b class="num">${v}</b></div>`).join("");
-  document.getElementById("calBadge").textContent=state.calibrated?"IEEE-CIS":"offline twin";
-  document.getElementById("calBadge").className="badge"+(state.calibrated?" on":"");
-  document.getElementById("llmBadge").textContent=state.llm_enabled?"DeepSeek on":"llm off";
-  document.getElementById("llmBadge").className="badge"+(state.llm_enabled?" llm":"");
+    `<div><span class="k">${k}</span><div class="v num">${v}</div></div>`).join("");
+  document.getElementById("calBadge").textContent=state.calibrated?"IEEE-CIS":"OFFLINE";
+  document.getElementById("calBadge").className="tag"+(state.calibrated?" hot":"");
+  document.getElementById("llmBadge").textContent=state.llm_enabled?"DEEPSEEK":"LLM OFF";
+  document.getElementById("llmBadge").className="tag"+(state.llm_enabled?" llm":"");
 }
 
 function charts(){
-  const labels=state.history.map(h=>"g"+h.generation);
+  chartDefaults();
+  const labels=(state.history||[]).map(h=>"G"+h.generation);
   const mk=(id,datasets,ymin)=>{
     const el=document.getElementById(id); if(!el) return;
-    const opts={plugins:{legend:{labels:{color:"#7a8896",font:{size:10,family:"IBM Plex Sans"}}}},
-      scales:{x:{ticks:{color:"#7a8896",font:{size:9}}},y:{min:ymin,ticks:{color:"#7a8896"}}}};
+    const opts={animation:{duration:400},plugins:{legend:{labels:{boxWidth:10}}},
+      scales:{x:{ticks:{maxRotation:0}},y:{min:ymin,grid:{color:"#1a2138"}}}};
     if(el.chart){el.chart.data.labels=labels; el.chart.data.datasets=datasets; el.chart.update(); return;}
     el.chart=new Chart(el,{type:"line",data:{labels,datasets},options:opts});
   };
   mk("armsChart",[
-    {label:"Retrained",data:state.history.map(h=>h.roc_auc),borderColor:"#e8572a",tension:.25,pointRadius:2,fill:false},
-    {label:"Frozen",data:state.history.map(h=>h.frozen_auc),borderColor:"#8b7cf6",tension:.25,pointRadius:2,spanGaps:true,fill:false},
+    {label:"RETRAIN",data:state.history.map(h=>h.roc_auc),borderColor:"#ffa02f",pointRadius:2,tension:0,fill:false,borderWidth:1.5},
+    {label:"FROZEN",data:state.history.map(h=>h.frozen_auc),borderColor:"#3ecf8e",pointRadius:2,tension:0,spanGaps:true,fill:false,borderWidth:1.5},
   ],0.5);
   mk("baselineChart",[
-    {label:"Sentinel",data:state.history.map(h=>h.recall),borderColor:"#3d9a7a",tension:.25,pointRadius:2,fill:false},
-    {label:"Rules",data:state.history.map(h=>h.baseline_recall),borderColor:"#f07a6a",tension:.25,pointRadius:2,fill:false},
+    {label:"SENTINEL",data:state.history.map(h=>h.recall),borderColor:"#3ecf8e",pointRadius:2,tension:0,fill:false,borderWidth:1.5},
+    {label:"RULES",data:state.history.map(h=>h.baseline_recall),borderColor:"#ff5c5c",pointRadius:2,tension:0,fill:false,borderWidth:1.5},
   ],0);
 }
 
@@ -120,29 +150,31 @@ function heatmap(){
 function mule(){
   const g=state.mule_graph||{};
   const svg=document.getElementById("mule");
-  const nodes=g.nodes||[], edges=g.edges||[];
-  if(!nodes.length){svg.innerHTML='<text x="16" y="72" fill="#7a8896" font-size="11">Mule graph after a generation</text>'; return;}
-  const sink=g.sink;
+  const nodes=g.nodes||[], sink=g.sink;
+  if(!nodes.length){
+    svg.innerHTML='<text x="16" y="80" fill="#8b93a7" font-size="11" font-family="IBM Plex Mono">MULE RING — run a generation</text>';
+    return;
+  }
   const others=nodes.filter(n=>n.id!==sink);
-  const cx=520, cy=70;
-  let html=`<text x="12" y="18" fill="#7a8896" font-size="10" font-family="IBM Plex Mono">MULE RING · unique-src fan-in</text>`;
+  const cx=560, cy=78;
+  let html='<text x="12" y="18" fill="#ffa02f" font-size="10" letter-spacing="2">FAN-IN · UNIQUE SRC / 1H</text>';
   others.forEach((n,i)=>{
-    const a=(Math.PI*1.2)*(i/(Math.max(others.length-1,1)))-0.6;
-    const x=80+Math.cos(a)*70, y=70+Math.sin(a)*48;
-    n._x=x; n._y=y;
-    html+=`<line x1="${x}" y1="${y}" x2="${cx}" y2="${cy}" stroke="#1e2a36"/>`;
-    html+=`<circle cx="${x}" cy="${y}" r="5" fill="#121922" stroke="#7a8896"/>`;
+    const a=(Math.PI*1.15)*(i/Math.max(others.length-1,1))-0.5;
+    const x=90+Math.cos(a)*78, y=78+Math.sin(a)*46;
+    html+=`<line x1="${x}" y1="${y}" x2="${cx}" y2="${cy}" stroke="#2a3050"/>`;
+    html+=`<rect x="${x-3}" y="${y-3}" width="6" height="6" fill="#0a0e1a" stroke="#8b93a7"/>`;
   });
-  html+=`<circle cx="${cx}" cy="${cy}" r="10" fill="#e8572a"/><text x="${cx+16}" y="${cy+4}" fill="#e8edf2" font-size="10" font-family="IBM Plex Mono">${(sink||"sink").slice(0,18)}</text>`;
+  html+=`<rect x="${cx-7}" y="${cy-7}" width="14" height="14" fill="#ffa02f"/>`;
+  html+=`<text x="${cx+18}" y="${cy+4}" fill="#e8ecf4" font-size="11">${(sink||"SINK").slice(0,22)}</text>`;
   svg.innerHTML=html;
 }
 
 function council(){
-  const logs=(state.agent_log||[]).slice(-16).reverse();
+  const logs=(state.agent_log||[]).slice(-18).reverse();
   const el=document.getElementById("council");
-  if(!logs.length){el.innerHTML='<div class="msg"><p>Council idle. Run a generation.</p></div>'; return;}
-  el.innerHTML=logs.map(l=>`<div class="msg ${l.agent||""}">
-    <div class="who"><b>${l.agent||"agent"}</b> · gen ${l.gen}</div>
+  if(!logs.length){el.innerHTML='<div class="brief"><p>Council idle. Run gen.</p></div>'; return;}
+  el.innerHTML=logs.map(l=>`<div class="brief ${l.agent||""}">
+    <div class="who">${l.agent||"agent"} · G${l.gen}</div>
     <p>${l.message||""}</p></div>`).join("");
 }
 
@@ -150,51 +182,65 @@ function genomeList(){
   const q=document.getElementById("gSearch").value.toLowerCase();
   document.getElementById("genomeList").innerHTML=(state.genomes||[]).filter(g=>
     !q || JSON.stringify(g).toLowerCase().includes(q))
-    .map(g=>`<li><button onclick="showGenome('${g.id}')">
-      <span class="id">${g.id}</span><span class="tier">${g.tier||"B"}</span>${(g.name||"").slice(0,32)}
+    .map(g=>`<li><button type="button" onclick="showGenome('${g.id}')">
+      <span class="gid">${g.id}</span><span class="tier">${g.tier||"B"}</span>${(g.name||"").slice(0,34)}
     </button></li>`).join("");
 }
 
 window.showGenome=function(id){
   const g=state.genomes.find(x=>x.id===id); if(!g) return;
   document.getElementById("genomeDetail").innerHTML=
-    `<b>${g.name}</b><br>tier ${g.tier||"?"} · ${g.origin||"seed"} · ${(g.rails||[]).join(", ")}<br>${g.summary||""}`;
+    `<b>${g.name}</b><br>TIER ${g.tier||"?"} · ${(g.rails||[]).join("/")} · ${(g.surfaces||[]).join("/")}<br>${g.summary||""}`;
 };
 
 function theater(){
   const t=document.getElementById("theater");
-  const items=[...(state.alerts||[]).map(a=>({t:"txn",ts:a.ts,a})),
-    ...(state.artifacts||[]).map(a=>({t:"art",ts:a.ts,a}))].sort((x,y)=>new Date(y.ts)-new Date(x.ts)).slice(0,28);
-  if(!items.length){t.innerHTML='<div class="card">No kill-chain yet.</div>'; return;}
-  t.innerHTML=items.map(({t:ty,a})=>{
+  const items=[...(state.alerts||[]).map(a=>({ty:"txn",ts:a.ts,a})),
+    ...(state.artifacts||[]).map(a=>({ty:"art",ts:a.ts,a}))].sort((x,y)=>new Date(y.ts)-new Date(x.ts)).slice(0,28);
+  if(!items.length){t.innerHTML='<div class="row"><div class="meta">EMPTY</div>No kill-chain loaded.</div>'; return;}
+  t.innerHTML=items.map(({ty,a})=>{
     if(ty==="art"){
-      const llm=a.forge_source==="llm"?'<span class="llm-tag">FORGE LLM</span>':"";
-      return `<div class="card"><span class="k">${a.kind}</span>${llm}<div>${a.text||""}</div></div>`;
+      const llm=a.forge_source==="llm"?"<em>FORGE LLM</em>":"";
+      return `<div class="row"><div class="meta">${a.kind||"art"}${llm}</div>${a.text||""}</div>`;
     }
-    const expl=(a.explanations||[]).map(e=>`<span class="chip">${e.feature}</span>`).join("");
-    return `<div class="card"><span class="amt ${a.is_fraud?"fraud":"ok"}">${a.is_fraud?"ATTACK":"FLAG"} ₹${Number(a.amount).toLocaleString("en-IN")}</span>
-      <span class="num" style="float:right;color:#7a8896">${a.score}</span>
-      <div class="chips">${expl}</div></div>`;
+    const expl=(a.explanations||[]).map(e=>`<span class="feat">${e.feature}</span>`).join("");
+    return `<div class="row"><div class="meta">${a.is_fraud?"ATTACK":"FLAG"} · ₹${Number(a.amount).toLocaleString("en-IN")} · ${a.score}</div>
+      <span class="${a.is_fraud?"loss":"ok"}">${a.src} → ${a.dst}</span>
+      <div class="feats">${expl}</div></div>`;
   }).join("");
 }
 
+function ticker(){
+  const names=(state.genomes||[]).slice(0,20).map(g=>g.id+" "+(g.name||"")).join("   ·   ");
+  const el=document.getElementById("ticker");
+  el.textContent=(names||"AGNI")+"   ·   IEEE-CIS FX INR   ·   RED QUEEN   ·   "+(names||"");
+}
+
 async function refresh(){
-  const r=await fetch("/api/state"); state=await r.json();
-  rubric(); cards(); charts(); heatmap(); mule(); council(); genomeList(); theater();
+  const r=await fetch("/api/state");
+  state=await r.json();
+  rubric(); cards(); charts(); heatmap(); mule(); council(); genomeList(); theater(); ticker();
 }
 
 document.getElementById("runBtn").onclick=async(e)=>{
-  e.target.disabled=true; e.target.textContent="Running…";
+  e.target.disabled=true; e.target.textContent="RUNNING";
   try{
     const r=await fetch("/api/loop/run",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({generations:1})});
-    if(!r.ok) throw new Error("run failed");
+    if(!r.ok) throw new Error("fail");
     await refresh();
-  } catch(err){
-    document.getElementById("runlog").textContent="Generation timed out or failed on this dyno. Metrics above are from the seeded run.";
-  } finally { e.target.disabled=false; e.target.textContent="Run generation"; }
+  }catch(err){
+    document.getElementById("runlog").textContent="Run failed or timed out. Seeded metrics remain on screen.";
+  }finally{
+    e.target.disabled=false; e.target.textContent="Run gen";
+  }
 };
 document.getElementById("gSearch").oninput=genomeList;
+document.getElementById("tabs").onclick=(e)=>{
+  const b=e.target.closest("button"); if(!b) return;
+  document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("show", p.id==="pane-"+b.dataset.pane));
+};
 refresh();
 </script>
 </body>
