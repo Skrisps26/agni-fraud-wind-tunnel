@@ -15,7 +15,7 @@ AGNI is a **Fraud Wind Tunnel**: a closed-loop adversarial AI system that identi
 
 ## Links
 
-- **GitHub:** (add repo URL after push)
+- **GitHub:** https://github.com/Skrisps26/agni-fraud-wind-tunnel
 - **Walkthrough:** `docs/AGNI_Solution_Walkthrough.docx`
 - **Demo:** `make setup && make api` → http://localhost:8000
 
