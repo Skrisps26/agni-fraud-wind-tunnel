@@ -6,28 +6,27 @@ import json
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 from agni.config import load
+from agni.eval.harness import occupancy_score
+from agni.genome.atlas import coverage_matrix
 from agni.genome.schema import load_genomes
-from agni.loop.redqueen import _alerts, _artifact_feed, run_loop
+from agni.loop.redqueen import _alerts, _artifact_feed, _build_demo_chains, run_loop
 
-app = FastAPI(title="AGNI - Fraud Wind Tunnel", version="0.3.0")
+app = FastAPI(title="AGNI - Fraud Wind Tunnel", version="0.4.0")
 
 ROOT = Path(__file__).resolve().parents[2]
-WEB = ROOT / "web"
+DIST = ROOT / "web" / "dist"
 RUNS = ROOT / "runs" / "latest.json"
-
-if WEB.exists():
-    app.mount("/static", StaticFiles(directory=str(WEB)), name="static")
 
 _STATE: dict = {"loaded": False}
 
 
 def _ensure_state() -> None:
-    if _STATE["loaded"]:
+    mtime = RUNS.stat().st_mtime if RUNS.exists() else 0
+    if _STATE.get("loaded") and _STATE.get("_mtime") == mtime:
         return
     try:
         data = json.loads(RUNS.read_text())
@@ -42,9 +41,15 @@ def _ensure_state() -> None:
         "agent_log": data.get("agent_log", []),
         "vector_det_rates": data.get("vector_det_rates", {}),
         "mule_graph": data.get("mule_graph", {"nodes": [], "edges": []}),
+        "demo_chains": data.get("demo_chains", {}),
+        "atlas": data.get("atlas", {}),
+        "protocol": data.get("protocol", {}),
+        "shadow": data.get("shadow", {}),
+        "league": data.get("league", []),
         "tte": data.get("tte_generations", 0),
         "loop_gain": data.get("loop_gain_auc", 0.0),
         "fidelity": data.get("fidelity_overall", 0.0),
+        "_mtime": mtime,
         "loaded": True,
     })
 
@@ -55,8 +60,14 @@ class RunRequest(BaseModel):
 
 
 @app.get("/")
-def index() -> FileResponse:
-    return FileResponse(WEB / "index.html")
+def index() -> Response:
+    page = DIST / "index.html"
+    if not page.exists():
+        return JSONResponse(
+            {"error": "UI not built. From repo root: make ui-build"},
+            status_code=503,
+        )
+    return FileResponse(page)
 
 
 @app.get("/health")
@@ -77,6 +88,11 @@ def state() -> JSONResponse:
         "agent_log": _STATE["agent_log"],
         "vector_det_rates": _STATE.get("vector_det_rates") or last.get("vector_det_rates", {}),
         "mule_graph": _STATE.get("mule_graph") or {},
+        "demo_chains": _STATE.get("demo_chains") or {},
+        "atlas": _STATE.get("atlas") or {},
+        "protocol": _STATE.get("protocol") or last.get("protocol") or {},
+        "shadow": _STATE.get("shadow") or {},
+        "league": _STATE.get("league") or [],
         "tte_generations": _STATE["tte"],
         "loop_gain_auc": _STATE["loop_gain"],
         "fidelity_mean": _STATE["fidelity"],
@@ -106,6 +122,11 @@ def run(req: RunRequest) -> JSONResponse:
     _STATE["agent_log"] = _STATE.get("agent_log", []) + result.agent_log
     _STATE["vector_det_rates"] = result.vector_det_rates
     _STATE["mule_graph"] = extra.get("mule_graph") or result.mule_graph
+    _STATE["demo_chains"] = _build_demo_chains(extra, extra.get("genome_of") or {})
+    _STATE["atlas"] = result.atlas
+    _STATE["protocol"] = result.protocol
+    _STATE["shadow"] = result.shadow
+    _STATE["league"] = result.league
     _STATE["tte"] = max(_STATE["tte"], result.tte_generations)
     _STATE["loop_gain"] = result.loop_gain_auc
     _STATE["fidelity"] = result.fidelity_overall
@@ -115,3 +136,35 @@ def run(req: RunRequest) -> JSONResponse:
                          "tte_generations": result.tte_generations,
                          "loop_gain_auc": result.loop_gain_auc,
                          "baseline_recall": last.get("baseline_recall")})
+
+
+class OccupancyRequest(BaseModel):
+    scores: list[float]
+    labels: list[int] | None = None
+
+
+@app.get("/api/atlas")
+def atlas() -> JSONResponse:
+    _ensure_state()
+    from agni.foundry import playbooks as _pb  # noqa: F401
+    cov = _STATE.get("atlas") or coverage_matrix()
+    return JSONResponse(cov)
+
+
+@app.post("/api/occupancy")
+def occupancy(req: OccupancyRequest) -> JSONResponse:
+    """Bank brings scores; AGNI grades them. Tunnel occupancy, not a hosted model."""
+    import numpy as np
+    labels = np.array(req.labels) if req.labels is not None else None
+    scores = np.array(req.scores, dtype=float)
+    dummy = None
+    return JSONResponse(occupancy_score(dummy, scores, labels))
+
+
+@app.get("/assets/{rest:path}")
+def asset(rest: str):
+    root = (DIST / "assets").resolve()
+    f = (root / rest).resolve()
+    if not str(f).startswith(str(root)) or not f.is_file():
+        return JSONResponse({"error": "asset not found"}, status_code=404)
+    return FileResponse(f)

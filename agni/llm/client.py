@@ -1,12 +1,16 @@
-"""OpenAI-compatible LLM client (DeepSeek, OpenAI, etc.)."""
+"""OpenAI-compatible LLM client (Groq, DeepSeek, OpenAI, etc.)."""
 
 from __future__ import annotations
 
 import json
+import logging
+import os
 import re
 
 from agni.config import load
 from agni.llm.cache import cache_key, get, put
+
+log = logging.getLogger("agni.llm")
 
 
 def llm_available() -> bool:
@@ -15,10 +19,18 @@ def llm_available() -> bool:
 
 def _client():
     from openai import OpenAI
+
     cfg = load()
-    base = cfg.llm_base_url or None
-    if cfg.llm_provider == "deepseek" and not base:
-        base = "https://api.deepseek.com"
+    defaults = {
+        "deepseek": "https://api.deepseek.com",
+        "groq": "https://api.groq.com/openai/v1",
+        "openai": "https://api.openai.com/v1",
+    }
+    base = cfg.llm_base_url or defaults.get(cfg.llm_provider)
+    if not base:
+        raise ValueError(f"No API base URL for LLM provider {cfg.llm_provider!r}")
+    if not cfg.llm_api_key:
+        raise ValueError("LLM API key missing (set AGNI_LLM_API_KEY or GROQ_API_KEY)")
     return OpenAI(api_key=cfg.llm_api_key, base_url=base)
 
 
@@ -26,9 +38,31 @@ def _model() -> str:
     cfg = load()
     if cfg.llm_model:
         return cfg.llm_model
-    if cfg.llm_provider == "deepseek":
-        return "deepseek-chat"
-    return "gpt-4o-mini"
+    defaults = {
+        "deepseek": "deepseek-chat",
+        "groq": "qwen/qwen3.8-27b",
+        "openai": "gpt-4o-mini",
+    }
+    return defaults.get(cfg.llm_provider, "gpt-4o-mini")
+
+
+def _completion_params(system: str, user: str) -> dict:
+    cfg = load()
+    params: dict = {
+        "model": _model(),
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0.6,
+    }
+    # Groq Qwen models expect max_completion_tokens (see Groq OpenAI compat docs).
+    if cfg.llm_provider == "groq":
+        params["max_completion_tokens"] = 512
+        params["top_p"] = 0.95
+    else:
+        params["max_tokens"] = 500
+    return params
 
 
 def chat_text(system: str, user: str, namespace: str = "chat",
@@ -41,18 +75,15 @@ def chat_text(system: str, user: str, namespace: str = "chat",
         if isinstance(cached, str) and cached:
             return cached
     try:
-        resp = _client().chat.completions.create(
-            model=_model(),
-            messages=[{"role": "system", "content": system},
-                      {"role": "user", "content": user}],
-            temperature=0.7,
-            max_tokens=500,
-        )
+        resp = _client().chat.completions.create(**_completion_params(system, user))
         text = (resp.choices[0].message.content or "").strip()
         if use_cache and text:
             put(namespace, key, text)
         return text
-    except Exception:
+    except Exception as exc:
+        log.warning("chat_text failed (%s): %s", _model(), exc)
+        if os.environ.get("AGNI_LLM_DEBUG"):
+            raise
         return ""
 
 

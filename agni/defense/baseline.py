@@ -29,6 +29,18 @@ def rules_predict(X: pd.DataFrame) -> np.ndarray:
     return pred
 
 
+def bank_checklist(X: pd.DataFrame) -> np.ndarray:
+    """Second baseline: velocity + amount + new-device. Still not Mastercard production."""
+    pred = np.zeros(len(X), dtype=int)
+    if "vel_1h" in X.columns:
+        pred |= (X["vel_1h"].to_numpy() > 8).astype(int)
+    if "device_new_for_user" in X.columns and "amt_z_user" in X.columns:
+        pred |= ((X["device_new_for_user"] > 0) & (X["amt_z_user"] > 2.5)).to_numpy().astype(int)
+    if "dst_unique_src_1h" in X.columns:
+        pred |= (X["dst_unique_src_1h"].to_numpy() > 1.2).astype(int)
+    return pred
+
+
 def evaluate_baseline(sim, holdout_cut: float = 0.8) -> dict:
     """Recall/precision on fraud txns in test holdout."""
     X, meta = build_dataset(sim)
@@ -44,10 +56,15 @@ def evaluate_baseline(sim, holdout_cut: float = 0.8) -> dict:
     prec = tp / max(tp + fp, 1)
     rec = tp / max(tp + fn, 1)
     f1 = 2 * prec * rec / max(prec + rec, 1e-9)
+    chk = bank_checklist(X_te)
+    c_tp = int(((chk == 1) & (y_te == 1)).sum())
+    c_fn = int(((chk == 0) & (y_te == 1)).sum())
+    c_rec = c_tp / max(c_tp + c_fn, 1)
     return {
         "baseline_recall": round(rec, 4),
         "baseline_precision": round(prec, 4),
         "baseline_f1": round(f1, 4),
+        "checklist_recall": round(c_rec, 4),
     }
 
 

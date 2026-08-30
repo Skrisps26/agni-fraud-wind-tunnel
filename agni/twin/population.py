@@ -108,6 +108,7 @@ class Population:
     def __init__(self, consumers, merchants, devices, mules, hour_weights=None):
         self.consumers: list[Consumer] = consumers
         self.merchants: list[Merchant] = merchants
+        self._merchant_p = None
         self.devices: list[str] = devices
         self.mules: list[Mule] = mules
         self.consumer_by_id = {c.id: c for c in consumers}
@@ -132,6 +133,10 @@ class Population:
         cat_w = np.array([s[2] for s in cat_stats]); cat_w /= cat_w.sum()
         hi_names, hi_stats = zip(*hi_items)
         hi_w = np.array([s[2] for s in hi_stats]); hi_w /= hi_w.sum()
+        # Zipf-like merchant popularity for a sparse UPI P2M graph.
+        merch_rank = np.arange(1, n_merchants + 1)
+        merch_zipf = 1.0 / np.power(merch_rank, 0.85)
+        merch_zipf /= merch_zipf.sum()
         for i in range(n_merchants):
             if i < int(0.94 * n_merchants):
                 ci = rng.choice(len(cat_names), p=cat_w)
@@ -168,6 +173,7 @@ class Population:
                  for i in range(64)]
 
         pop = cls(consumers, merchants, devices, mules)
+        pop._merchant_p = merch_zipf
 
         # ---- real-anchor calibration -------------------------------------
         if calibration:
@@ -204,8 +210,10 @@ class Population:
 
     def sample_merchant(self, rng: np.random.Generator, high_risk: bool | None = None) -> Merchant:
         pool = ([m for m in self.merchants if m.is_high_risk] if high_risk
-                else [m for m in self.merchants if not m.is_high_risk]) \
-            if high_risk is not None else self.merchants
+                else [m for m in self.merchants if not m.is_high_risk] if high_risk is not None
+                else self.merchants)
+        if high_risk is None and self._merchant_p is not None and len(self._merchant_p) == len(self.merchants):
+            return self.merchants[int(rng.choice(len(self.merchants), p=self._merchant_p))]
         return pool[int(rng.integers(len(pool)))]
 
     def merchant_txn_amount(self, rng: np.random.Generator, m: Merchant) -> float:

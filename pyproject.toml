@@ -17,11 +17,12 @@ dependencies = [
     "pydantic>=2.6",
     "fastapi>=0.110",
     "uvicorn>=0.29",
+    "openai>=1.30",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.4"]
-llm = ["openai>=1.30"]           # optional LLM enrichment for playbooks/judge/critic
+llm = []  # openai is a core dep; kept for backwards-compatible `pip install -e ".[llm]"`
 explain = ["shap>=0.45"]
 
 [project.scripts]

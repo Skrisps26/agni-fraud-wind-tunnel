@@ -15,7 +15,7 @@ payment fraud attack vector as JSON matching this schema:
   "observables": [{"name":"...","description":"...","signal_strength":0.0-1.0}],
   "params": {}
 }
-Return ONLY valid JSON. Use an existing playbook key — Scout ideates, Foundry executes."""
+Return ONLY valid JSON. Prefer filling an atlas hole. Scout must compile an executable playbook (the loop binds a sandbox class)."""
 
 FORGE_SYSTEM = """You are the Forge Agent. Rewrite payment-fraud artifact text to be
 more realistic and locally plausible for India (UPI, NPCI, Hindi/regional cues OK).

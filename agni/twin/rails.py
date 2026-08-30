@@ -93,12 +93,15 @@ BENIGN_SMS = [
 
 
 class Simulation:
-    def __init__(self, population, days: int, start: datetime | None = None):
+    def __init__(self, population, days: int, start: datetime | None = None,
+                 daily_lambda: float = 1.15, benign_msg_cap: int = 2500):
         self.pop = population
         self.days = days
         self.start = start or START_DATE
         self.end = self.start + timedelta(days=days)
         self.ledger = Ledger()
+        self.daily_lambda = daily_lambda
+        self.benign_msg_cap = benign_msg_cap
 
     # ------------------------------------------------------------------ clock
     def ts(self, day_offset: float, hour: int, minute: int = 0) -> datetime:
@@ -117,11 +120,11 @@ class Simulation:
     def background_traffic(self, rng: np.random.Generator) -> int:
         """Generate legitimate consumer activity across the horizon."""
         pop = self.pop
-        lam = self.days * 1.15
+        lam = self.days * self.daily_lambda
         n_added = 0
         for c in pop.consumers:
             count = rng.poisson(lam * 0.35 + 4)
-            count = min(count, self.days * 3)
+            count = min(count, self.days * 4)
             for _ in range(count):
                 ts = self.random_ts(rng)
                 dev = c.device_ids[int(rng.integers(len(c.device_ids)))]
@@ -129,8 +132,10 @@ class Simulation:
                     m = pop.sample_merchant(rng)
                     amt = pop.merchant_txn_amount(rng, m)
                     rail = "card" if rng.random() < 0.3 else "upi"
-                    ch = "pos" if rail == "card" and rng.random() < 0.7 else (
-                        "online" if rail == "card" else "upi")
+                    if rail == "card":
+                        ch = "pos" if rng.random() < 0.7 else "online"
+                    else:
+                        ch = "upi_collect" if rng.random() < 0.12 else "upi_pay"
                     self.ledger.add_txn(Txn(
                         self.ledger.next_txn_id(), ts, c.id, m.id, "p2m", rail,
                         amt, ch, dev, c.city, m.id, False))
@@ -140,10 +145,10 @@ class Simulation:
                         peer = pop.consumers[int(rng.integers(len(pop.consumers)))]
                     self.ledger.add_txn(Txn(
                         self.ledger.next_txn_id(), ts, c.id, peer.id, "p2p", "upi",
-                        pop.p2p_amount(rng, c), "upi", dev, c.city, None, False))
+                        pop.p2p_amount(rng, c), "upi_pay", dev, c.city, None, False))
                 n_added += 1
         # benign message artifacts (capped sample keeps text head balanced/fast)
-        cap = min(len(pop.consumers), 2500)
+        cap = min(len(pop.consumers), self.benign_msg_cap)
         idx = rng.choice(len(pop.consumers), size=min(cap, 2200), replace=False)
         for i in idx:
             c = pop.consumers[i]

@@ -75,8 +75,25 @@ class FusionDetector:
 
     # ---------------------------------------------------------------- metrics
     @staticmethod
+    @staticmethod
+    def conformal_threshold(p_cal: np.ndarray, y_cal: np.ndarray,
+                            fpr_budget: float) -> float:
+        legit = p_cal[y_cal == 0]
+        if not len(legit):
+            return 0.5
+        q = np.clip(1.0 - fpr_budget, 0.5, 0.9999)
+        return float(np.quantile(legit, q))
+
+    @staticmethod
     def choose_threshold(p: np.ndarray, y: np.ndarray,
                          fpr_budget: float = 0.005) -> float:
+        """F1-max under FPR budget, then conformal quantile on legit as a floor."""
+        f1_thr = FusionDetector._f1_threshold(p, y, fpr_budget)
+        conf = FusionDetector.conformal_threshold(p, y, fpr_budget)
+        return float(max(f1_thr, conf))
+
+    @staticmethod
+    def _f1_threshold(p: np.ndarray, y: np.ndarray, fpr_budget: float) -> float:
         legit = p[y == 0]
         if not len(legit):
             return 0.5
@@ -118,3 +135,17 @@ class FusionDetector:
         order = np.argsort(-contrib)[:top_k]
         return [{"feature": feats[i], "contribution": round(float(contrib[i]), 4),
                  "value": round(float(row[i]), 4)} for i in order]
+
+    def case_ticket(self, X: pd.DataFrame, row_idx: int, genome=None) -> dict:
+        """DI-shaped analyst ticket: top features + genome observables."""
+        feats = self.explain(X, row_idx, top_k=4)
+        obs = []
+        if genome is not None:
+            for o in getattr(genome, "observables", [])[:4]:
+                obs.append({"name": o.name, "description": o.description,
+                            "signal_strength": o.signal_strength})
+        return {
+            "features": feats,
+            "observables": obs,
+            "note": "Synthetic case ticket — not Mastercard production DI.",
+        }

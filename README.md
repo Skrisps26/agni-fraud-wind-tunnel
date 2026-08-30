@@ -11,16 +11,25 @@ make setup
 cp ~/Downloads/train_transaction.csv data/anchor/   # optional
 make calibrate
 make loop
-make api    # http://localhost:8000
+cd web && npm ci && npm run build   # once; or `make ui-build`
+make api    # http://localhost:8000  (serves the React UI from web/dist)
+# live UI work: make api  +  make ui  (Vite on :5173, proxies /api)
 ```
 
 `.env` (local, never commit):
 
 ```
-AGNI_LLM_PROVIDER=deepseek
-AGNI_LLM_BASE_URL=https://api.deepseek.com
-AGNI_LLM_API_KEY=sk-...
-AGNI_LLM_MODEL=deepseek-chat
+# Groq (fast / cheap — recommended)
+AGNI_LLM_PROVIDER=groq
+AGNI_LLM_API_KEY=gsk_...
+AGNI_LLM_MODEL=qwen/qwen3.8-27b
+# Cheaper/faster: llama-3.1-8b-instant
+
+# Or DeepSeek:
+# AGNI_LLM_PROVIDER=deepseek
+# AGNI_LLM_BASE_URL=https://api.deepseek.com
+# AGNI_LLM_API_KEY=sk-...
+# AGNI_LLM_MODEL=deepseek-chat
 ```
 
 ## Cloud

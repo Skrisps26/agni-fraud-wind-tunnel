@@ -12,12 +12,12 @@ import pandas as pd
 
 FEATURES = [
     "amount_log", "amt_z_user",
-    "vel_10m", "vel_1h", "vel_24h",
+    "vel_10m", "vel_1h", "vel_24h", "vel_ratio_10m_24h", "interarrival_log",
     "new_dst_pair", "dst_fan_in", "dst_max_src_share", "dst_fwd_rate_24h",
     "dst_unique_src_1h", "src_new_dst_24h",
     "device_new_for_user",
     "hour_sin", "hour_cos", "off_hours",
-    "kind_p2m", "rail_card", "rail_wire", "channel_agent",
+    "kind_p2m", "rail_card", "rail_wire", "channel_agent", "channel_collect",
     "merchant_high_risk", "user_tenure_days",
 ]
 
@@ -121,6 +121,13 @@ def build_dataset(sim) -> tuple[pd.DataFrame, pd.DataFrame]:
     epochs = df["ts"].to_numpy(dtype="datetime64[s]").astype("int64")
 
     v10, v1h, v24 = _per_src_velocity(df, epochs)
+    vel_ratio = v10 / np.maximum(v24, 1.0)
+    inter = np.zeros(len(df))
+    for _, idx in df.groupby("src", sort=False).indices.items():
+        idx = np.asarray(idx)
+        ep = epochs[idx]
+        d = np.diff(ep, prepend=ep[0])
+        inter[idx] = np.log1p(np.maximum(d, 0))
     amt_z = _expanding_zscore(df)
     fan_in, share, fwd = _dst_features(df, epochs)
     uniq_1h = _dst_unique_src_1h(df, epochs)
@@ -159,6 +166,8 @@ def build_dataset(sim) -> tuple[pd.DataFrame, pd.DataFrame]:
         "amt_z_user": amt_z,
         "vel_10m": v10.astype(float), "vel_1h": v1h.astype(float),
         "vel_24h": v24.astype(float),
+        "vel_ratio_10m_24h": vel_ratio.astype(float),
+        "interarrival_log": inter.astype(float),
         "new_dst_pair": new_pair.astype(float),
         "dst_fan_in": np.log1p(fan_in),
         "dst_max_src_share": share,
@@ -173,6 +182,7 @@ def build_dataset(sim) -> tuple[pd.DataFrame, pd.DataFrame]:
         "rail_card": (df["rail"] == "card").to_numpy().astype(float),
         "rail_wire": (df["rail"] == "wire").to_numpy().astype(float),
         "channel_agent": (df["channel"] == "agent").to_numpy().astype(float),
+        "channel_collect": (df["channel"].isin(["upi_collect", "collect"])).to_numpy().astype(float),
         "merchant_high_risk": merch_hr,
         "user_tenure_days": tenure,
     })[FEATURES]

@@ -15,11 +15,13 @@ from sklearn.metrics import roc_auc_score
 from agni.agents.critic import critic_brief
 from agni.agents.scout import scout_propose
 from agni.config import Config, load
-from agni.defense.baseline import evaluate_baseline, vector_det_rates
+from agni.defense.baseline import bank_checklist, evaluate_baseline, rules_predict, vector_det_rates
 from agni.defense.features import FEATURES, build_dataset
 from agni.defense.model import FusionDetector
+from agni.eval.harness import protocol_block
 from agni.foundry.base import AttackContext, build_playbook
-from agni.foundry.judge import judge_all
+from agni.foundry.judge import joint_mmd, judge_all
+from agni.genome.atlas import coverage_matrix
 from agni.genome.schema import AttackGenome, clone_with_params, load_genomes, propose_variant
 from agni.twin.calibrate import load_anchor_sample, load_calibration
 from agni.twin.population import Population
@@ -36,6 +38,11 @@ class RedQueenResult:
     tte_generations: int = 0
     loop_gain_auc: float = 0.0
     fidelity_overall: float = 0.0
+    joint_mmd: float = 0.0
+    atlas: dict = field(default_factory=dict)
+    protocol: dict = field(default_factory=dict)
+    shadow: dict = field(default_factory=dict)
+    league: list[dict] = field(default_factory=list)
     total_legit_txns: int = 0
     total_attack_txns: int = 0
 
@@ -129,11 +136,13 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
     thr = 0.5
     arts = pd.DataFrame()
     defender = FusionDetector(cfg.seed, cfg.text_blend_weight)
+    last_genome_of: dict[str, str] = {}
 
     for g in range(G):
         t0 = time.time()
         gen_rng = np.random.default_rng(rng.integers(2 ** 62))
-        sim = Simulation(pop, days=cfg.days)
+        sim = Simulation(pop, days=cfg.days, daily_lambda=cfg.daily_txn_lambda,
+                         benign_msg_cap=cfg.benign_msg_cap)
         sim.background_traffic(gen_rng)
 
         genome_of: dict[str, str] = {}
@@ -160,8 +169,11 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
                     if verbose:
                         print(f"  [warn] {genome.id} failed: {exc!r}")
 
+        last_genome_of = dict(genome_of)
+
         reports = judge_all(sim, genome_of, anchor=anchor)
         fid_mean = float(np.mean([r.overall for r in reports])) if reports else 0.0
+        j_mmd = joint_mmd(sim.ledger.to_df())
 
         X, meta = build_dataset(sim)
         y = meta["is_fraud"].to_numpy()
@@ -221,6 +233,12 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
                                 "hit": (p_all[mask_atk] >= thr)})
             rate_by_aid = sub.groupby("aid")["hit"].mean().to_dict()
         last_vector_rates = vector_det_rates(meta, p_all, thr, genome_of)
+        proto = protocol_block(
+            X, y, meta, p_all, thr, genome_of, cut, cfg.fpr_budget,
+            cfg.target_fraud_rate, cfg.held_out_playbooks, genomes, cfg.seed)
+        proto["lab_auc"] = m_new.get("roc_auc")
+        proto["joint_mmd"] = j_mmd
+        proto["checklist_recall"] = baseline.get("checklist_recall")
 
         entry = {
             "generation": g, "legit_txns": int((y == 0).sum()),
@@ -233,7 +251,9 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
             "evasion_pressure": evasion,
             "baseline_recall": baseline["baseline_recall"],
             "baseline_precision": baseline["baseline_precision"],
+            "checklist_recall": baseline.get("checklist_recall"),
             "vector_det_rates": last_vector_rates,
+            "protocol": proto,
             "secs": round(time.time() - t0, 1),
         }
         history.append(entry)
@@ -242,7 +262,9 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
             ev = " EVASION" if evasion else ""
             print(f"gen {g}: auc={m_new['roc_auc']:.3f} rec={m_new['recall']:.3f} "
                   f"fpr={m_new['fpr']:.4%} fidelity={fid_mean:.2f} "
-                  f"frozenAUC={fe} rules_rec={baseline['baseline_recall']:.2%}{ev} "
+                  f"frozenAUC={fe} rules_rec={baseline['baseline_recall']:.2%} "
+                  f"holdoutAUC={proto.get('family_holdout_auc')} "
+                  f"rec@base={proto.get('recall_at_base_rate')}{ev} "
                   f"({entry['secs']}s)")
 
         last_det_rate = {}
@@ -254,12 +276,14 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
 
         weakest = min(last_det_rate, key=last_det_rate.get, default=None) if last_det_rate else None
         mutate_thresh = 0.92 if evasion else 0.85
+        already_child = {g.family() for g in genomes if g.parent_ids}
 
         nxt = []
         probe_ctx = AttackContext(sim, gen_rng, "probe", {}, feedback={"det_rate": 0.0})
         for genome in genomes:
             dr = last_det_rate.get(genome.id)
-            if dr is not None and dr < mutate_thresh and len(nxt) < cfg.max_genomes - 1:
+            if (dr is not None and dr < mutate_thresh and len(nxt) < cfg.max_genomes - 1
+                    and genome.family() not in already_child):
                 try:
                     pb = build_playbook(genome)
                     probe_ctx.feedback = {
@@ -301,12 +325,35 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
     result.loop_gain_auc = round(history[-1]["roc_auc"] - history[0]["roc_auc"], 4)
     result.fidelity_overall = round(float(np.mean(
         [h["fidelity_mean"] for h in history])), 4)
+    result.joint_mmd = round(float(np.mean(
+        [h.get("protocol", {}).get("joint_mmd") or 0 for h in history])), 4)
+    result.atlas = coverage_matrix(genomes)
+    result.protocol = history[-1].get("protocol") or {}
+    result.shadow = {
+        "frozen_auc_curve": [h.get("frozen_auc") for h in history],
+        "tte_generations": result.tte_generations,
+        "fpr_budget": cfg.fpr_budget,
+        "note": "Shadow: frozen Sentinel vs Critic mutations. Not a live DI deploy.",
+    }
+    result.league = [
+        {
+            "generation": h["generation"],
+            "coverage": result.atlas.get("coverage"),
+            "fidelity_mmd": (h.get("protocol") or {}).get("joint_mmd"),
+            "tte": result.tte_generations,
+            "recall_at_0_5_fpr": h.get("recall"),
+            "recall_at_base_rate": (h.get("protocol") or {}).get("recall_at_base_rate"),
+            "family_holdout_auc": (h.get("protocol") or {}).get("family_holdout_auc"),
+        }
+        for h in history
+    ]
     result.total_legit_txns = sum(h["legit_txns"] for h in history)
     result.total_attack_txns = sum(h["attack_txns"] for h in history)
     return result, {"p_all": p_all, "meta": meta, "X": X, "thr": thr,
                     "arts": arts, "defender": defender,
                     "agent_log": agent_log, "vector_det_rates": last_vector_rates,
-                    "mule_graph": result.mule_graph}
+                    "mule_graph": result.mule_graph, "genome_of": last_genome_of,
+                    "genomes": genomes}
 
 
 def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
@@ -323,8 +370,10 @@ def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
             continue
         seen.add(row.txn_id)
         expl = []
+        ticket = {}
         if defender is not None and X is not None:
             expl = defender.explain(X, i, top_k=3)
+            ticket = defender.case_ticket(X, i)
         out.append({
             "txn_id": str(row.txn_id), "score": round(float(p_all[i]), 4),
             "flag": bool(p_all[i] >= thr), "is_fraud": int(row.is_fraud),
@@ -332,6 +381,7 @@ def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
             "amount": float(row.amount), "ts": str(row.ts),
             "attack_id": str(row.attack_id),
             "explanations": expl,
+            "ticket": ticket,
         })
         if len(out) >= top_k:
             break
@@ -364,6 +414,95 @@ def _artifact_feed(payload_extra: dict, top_k: int = 15) -> list[dict]:
             break
     picked.reverse()
     return picked
+
+
+_ARTIFACT_LABELS = {
+    "call_transcript": "Voice call (synthetic)",
+    "chat": "Chat / support bot",
+    "email": "Email lure",
+    "sms": "Phishing SMS",
+    "listing": "Agentic checkout listing",
+    "note": "Card harvest",
+}
+
+
+def _stage_for_kind(kind: str) -> int:
+    if kind in ("call_transcript", "chat", "email"):
+        return 1
+    if kind == "sms":
+        return 2
+    if kind == "listing":
+        return 3
+    if kind == "note":
+        return 4
+    return 4
+
+
+def _build_demo_chains(extra: dict, genome_of: dict) -> dict[str, list]:
+    """Per-genome kill chains with Sentinel vs rules verdicts on each transfer."""
+    meta = extra.get("meta")
+    X = extra.get("X")
+    p_all = extra.get("p_all")
+    thr = float(extra.get("thr") or 0.5)
+    arts = extra.get("arts")
+    if meta is None or not len(meta) or p_all is None or not len(p_all):
+        return {}
+
+    rules = rules_predict(X) if X is not None and len(X) else np.zeros(len(meta))
+
+    # Best attack run per genome base (most artifacts + transfers).
+    candidates: dict[str, list[str]] = {}
+    for aid, gid in genome_of.items():
+        base = _gid_from_aid(aid, {aid: gid})
+        candidates.setdefault(base, []).append(aid)
+
+    chains: dict[str, list] = {}
+    for base, aids in candidates.items():
+        best_aid, best_steps = None, []
+        for aid in aids:
+            steps = _chain_for_attack(aid, meta, p_all, thr, rules, arts)
+            if len(steps) > len(best_steps):
+                best_aid, best_steps = aid, steps
+        if best_steps:
+            chains[base] = best_steps
+    return chains
+
+
+def _chain_for_attack(aid: str, meta: pd.DataFrame, p_all: np.ndarray, thr: float,
+                      rules: np.ndarray, arts: pd.DataFrame | None) -> list[dict]:
+    steps: list[dict] = []
+    if arts is not None and len(arts) and "attack_id" in arts.columns:
+        sub = arts[arts["attack_id"] == aid].sort_values("ts")
+        for r in sub.itertuples():
+            kind = str(r.kind)
+            steps.append({
+                "type": "artifact",
+                "ts": str(r.ts),
+                "stage": _stage_for_kind(kind),
+                "title": _ARTIFACT_LABELS.get(kind, kind),
+                "body": str(r.text)[:420],
+                "llm": str(getattr(r, "forge_source", "")) == "llm",
+            })
+
+    for i in range(len(meta)):
+        row = meta.iloc[i]
+        if str(row["attack_id"]) != aid or int(row["is_fraud"]) != 1:
+            continue
+        score = float(p_all[i])
+        steps.append({
+            "type": "transfer",
+            "ts": str(row["ts"]),
+            "stage": 5,
+            "title": f"UPI ₹{float(row['amount']):,.0f}",
+            "body": f"{row['src']} → {row['dst']}",
+            "amount": float(row["amount"]),
+            "sentinel_score": round(score, 4),
+            "sentinel_caught": bool(score >= thr),
+            "rules_caught": bool(rules[i]),
+        })
+
+    steps.sort(key=lambda s: s["ts"])
+    return steps
 
 
 def main() -> None:
@@ -400,6 +539,12 @@ def main() -> None:
     payload["alerts"] = _alerts(extra)
     payload["artifacts"] = _artifact_feed(extra)
     payload["mule_graph"] = extra.get("mule_graph", {})
+    payload["demo_chains"] = _build_demo_chains(extra, extra.get("genome_of") or {})
+    payload["atlas"] = result.atlas
+    payload["protocol"] = result.protocol
+    payload["shadow"] = result.shadow
+    payload["league"] = result.league
+    payload["joint_mmd"] = result.joint_mmd
     (out_dir / "latest.json").write_text(json.dumps(payload, indent=1))
     print(f"wrote {out_dir / 'latest.json'}")
 

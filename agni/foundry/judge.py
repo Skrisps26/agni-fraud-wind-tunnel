@@ -100,6 +100,33 @@ def judge_attack(df: pd.DataFrame, artifacts: pd.DataFrame,
                           round(overall, 4))
 
 
+def joint_mmd(df: pd.DataFrame, n: int = 400, seed: int = 7) -> float:
+    """RBF MMD on (log amount, hour) between fraud and legit. 1 - min(mmd,1)."""
+    legit = df[df.is_fraud == 0]
+    fraud = df[df.is_fraud == 1]
+    if len(legit) < 30 or len(fraud) < 10:
+        return 0.5
+    rng = np.random.default_rng(seed)
+
+    def _xy(part):
+        idx = rng.choice(len(part), size=min(n, len(part)), replace=False)
+        sub = part.iloc[idx]
+        a = np.log1p(sub.amount.to_numpy(dtype=float))
+        h = pd.to_datetime(sub.ts).dt.hour.to_numpy(dtype=float) / 24.0
+        z = np.stack([a, h], axis=1)
+        z = (z - z.mean(0)) / np.maximum(z.std(0), 1e-6)
+        return z
+
+    x, yv = _xy(legit), _xy(fraud)
+
+    def k(a, b):
+        d = ((a[:, None, :] - b[None, :, :]) ** 2).sum(-1)
+        return np.exp(-d / 2.0)
+
+    mmd = float(k(x, x).mean() + k(yv, yv).mean() - 2 * k(x, yv).mean())
+    return round(max(0.0, 1.0 - abs(mmd)), 4)
+
+
 def _llm_text_realism(text: str) -> float:
     try:
         from agni.llm.client import chat_json, llm_available
@@ -127,5 +154,5 @@ def judge_all(sim, genome_of: dict[str, str] | None = None,
     reports = []
     for aid in sorted(a for a in df.attack_id.unique() if a):
         gid = genome_of.get(aid, aid.rsplit("-", 1)[0] if "-" in aid else aid)
-        reports.append(judge_attack(df, arts, aid, gid, anchor=anchor))
+    reports.append(judge_attack(df, arts, aid, gid, anchor=anchor))
     return reports

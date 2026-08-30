@@ -50,6 +50,15 @@ class AttackContext:
             self.sim.ledger.next_art_id(), ts, src, kind, enriched, 1, self.attack_id,
             forge_source=source))
 
+    def add_chain(self, src, day: float, pieces: list[tuple[str, str, int]]) -> None:
+        """Multi-turn kill chain: (kind, text, delay_minutes) with shared entity."""
+        from datetime import timedelta
+        t0 = self.sim.ts(day, int(self.rng.integers(9, 21)))
+        t = t0
+        for kind, text, delay_m in pieces:
+            t = t + timedelta(minutes=int(delay_m))
+            self.add_artifact(t, src, kind, text)
+
     def victim_history(self, victim_id: str):
         """Victim's legit transactions so far - used for personalization."""
         return [t for t in self.sim.ledger.txns

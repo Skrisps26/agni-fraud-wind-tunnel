@@ -20,6 +20,40 @@ class Rail(str, Enum):
     UPI = "upi"
     WIRE = "wire"
     WALLET = "wallet"
+    RUPAY = "rupay"
+    AEPS = "aeps"
+    IMPS = "imps"
+    NEFT = "neft"
+    RTGS = "rtgs"
+    BNPL = "bnpl"
+    USSD = "ussd"
+
+
+class Channel(str, Enum):
+    UPI_PAY = "upi_pay"
+    UPI_COLLECT = "upi_collect"
+    UPI_AUTOPAY = "upi_autopay"
+    CARD_CNP = "card_cnp"
+    CARD_CP = "card_cp"
+    AGENT_PAY = "agent_pay"
+    MERCHANT_ONBOARD = "merchant_onboard"
+    DISPUTE = "dispute"
+    SUPPORT_CHAT = "support_chat"
+
+
+class Victim(str, Enum):
+    CONSUMER = "consumer"
+    SME = "sme"
+    MERCHANT = "merchant"
+    AGENT = "agent"
+
+
+class KillChainStage(str, Enum):
+    CONTACT = "contact"
+    PHISH = "phish"
+    TRAP = "trap"
+    HARVEST = "harvest"
+    TRANSFER = "transfer"
 
 
 class Surface(str, Enum):
@@ -38,6 +72,12 @@ class GenAICapability(str, Enum):
     DOCUMENT_FORGERY = "document_forgery"
     IMAGE_GENERATION = "image_generation"
     AGENT_ORCHESTRATION = "agent_orchestration"
+
+
+class Citation(BaseModel):
+    source: str
+    url: str = ""
+    note: str = ""
 
 
 class Observable(BaseModel):
@@ -63,6 +103,20 @@ class AttackGenome(BaseModel):
     parent_ids: list[str] = Field(default_factory=list)
     generation_born: int = 0
     tier: Literal["A", "B", "C"] = "B"
+    family_id: str = ""
+    channels: list[Channel] = Field(default_factory=list)
+    victims: list[Victim] = Field(default_factory=list)
+    stages: list[KillChainStage] = Field(default_factory=list)
+    citations: list[Citation] = Field(default_factory=list)
+    executable: bool = True
+    hole: str = ""
+
+    def family(self) -> str:
+        if self.family_id:
+            return self.family_id
+        if self.parent_ids:
+            return self.parent_ids[0].split("-m")[0].split("-v")[0]
+        return self.playbook
 
 
 SEED_DIR = Path(__file__).parent / "seed"
