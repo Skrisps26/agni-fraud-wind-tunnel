@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: agni-wind-tunnel
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: AGNI_CLOUD
+        value: "1"
+      - key: AGNI_LLM_PROVIDER
+        sync: false
+      - key: AGNI_LLM_API_KEY
+        sync: false
+      - key: AGNI_LLM_BASE_URL
+        value: https://api.deepseek.com
+      - key: AGNI_LLM_MODEL
+        value: deepseek-chat

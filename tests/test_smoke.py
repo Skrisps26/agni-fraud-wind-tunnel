@@ -45,8 +45,9 @@ def test_api_state_and_contract():
     r = client.get("/api/state")
     assert r.status_code == 200
     body = r.json()
-    for key in ("history", "genomes", "alerts", "tte_generations"):
+    for key in ("history", "genomes", "alerts", "tte_generations", "mule_graph"):
         assert key in body
+    assert client.get("/health").status_code == 200
     r2 = client.post("/api/loop/run", json={"generations": 1})
     assert r2.status_code == 200
     assert r2.json()["ok"] is True

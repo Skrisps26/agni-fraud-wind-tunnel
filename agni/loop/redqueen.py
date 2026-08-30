@@ -32,6 +32,7 @@ class RedQueenResult:
     genomes_final: list[dict] = field(default_factory=list)
     agent_log: list[dict] = field(default_factory=list)
     vector_det_rates: dict[str, float] = field(default_factory=dict)
+    mule_graph: dict = field(default_factory=dict)
     tte_generations: int = 0
     loop_gain_auc: float = 0.0
     fidelity_overall: float = 0.0
@@ -77,6 +78,28 @@ def _gid_from_aid(aid: str, genome_of: dict[str, str]) -> str:
     return aid.rsplit("-g", 1)[0] if "-g" in aid else aid
 
 
+def _mule_graph(meta: pd.DataFrame, top_n: int = 18) -> dict:
+    """Compact src-dst graph of fraud txns for the UI mule strip."""
+    if meta is None or not len(meta):
+        return {"nodes": [], "edges": []}
+    fraud = meta[meta["is_fraud"] == 1]
+    if not len(fraud):
+        return {"nodes": [], "edges": []}
+    fan = fraud.groupby("dst").size().sort_values(ascending=False)
+    sink = str(fan.index[0]) if len(fan) else None
+    sub = fraud[fraud["dst"] == sink].head(top_n) if sink else fraud.head(top_n)
+    nodes, seen = [], set()
+    edges = []
+    for r in sub.itertuples():
+        for n in (str(r.src), str(r.dst)):
+            if n not in seen:
+                seen.add(n)
+                nodes.append({"id": n, "sink": n == sink})
+        edges.append({"src": str(r.src), "dst": str(r.dst),
+                      "amount": float(r.amount)})
+    return {"nodes": nodes, "edges": edges, "sink": sink}
+
+
 def run_loop(cfg: Config | None = None, generations: int | None = None,
              verbose: bool = True) -> tuple[RedQueenResult, dict]:
     cfg = cfg or load()
@@ -114,7 +137,10 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
         sim.background_traffic(gen_rng)
 
         genome_of: dict[str, str] = {}
+        held = set(cfg.held_out_playbooks)
         for genome in genomes:
+            if g == 0 and genome.playbook in held:
+                continue
             try:
                 pb = build_playbook(genome)
             except KeyError:
@@ -271,6 +297,7 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
     result.genomes_final = [json.loads(g.model_dump_json()) for g in genomes]
     result.agent_log = agent_log
     result.vector_det_rates = last_vector_rates
+    result.mule_graph = _mule_graph(meta)
     result.loop_gain_auc = round(history[-1]["roc_auc"] - history[0]["roc_auc"], 4)
     result.fidelity_overall = round(float(np.mean(
         [h["fidelity_mean"] for h in history])), 4)
@@ -278,7 +305,8 @@ def run_loop(cfg: Config | None = None, generations: int | None = None,
     result.total_attack_txns = sum(h["attack_txns"] for h in history)
     return result, {"p_all": p_all, "meta": meta, "X": X, "thr": thr,
                     "arts": arts, "defender": defender,
-                    "agent_log": agent_log, "vector_det_rates": last_vector_rates}
+                    "agent_log": agent_log, "vector_det_rates": last_vector_rates,
+                    "mule_graph": result.mule_graph}
 
 
 def _alerts(payload_extra: dict, top_k: int = 12) -> list[dict]:
@@ -371,6 +399,7 @@ def main() -> None:
     payload = result.to_json()
     payload["alerts"] = _alerts(extra)
     payload["artifacts"] = _artifact_feed(extra)
+    payload["mule_graph"] = extra.get("mule_graph", {})
     (out_dir / "latest.json").write_text(json.dumps(payload, indent=1))
     print(f"wrote {out_dir / 'latest.json'}")
 

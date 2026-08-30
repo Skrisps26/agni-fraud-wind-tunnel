@@ -1,177 +1,197 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>AGNI - Fraud Wind Tunnel</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>AGNI — Fraud Wind Tunnel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/app.css"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<style>
-  body{background:#0b0f17;color:#e5e7eb;font-family:ui-sans-serif,system-ui}
-  .card{background:#111827;border:1px solid #1f2937;border-radius:.75rem}
-  .chip{font-size:.65rem;padding:.1rem .45rem;border-radius:9999px;border:1px solid #374151}
-  .fraud{color:#f87171}.ok{color:#34d399}
-  .heat-lo{background:#1f2937}.heat-mid{background:#92400e}.heat-hi{background:#166534}
-  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#1f2937;border-radius:3px}
-  @media(max-width:1280px){main{grid-template-columns:1fr!important}section{max-height:none!important}}
-</style>
 </head>
-<body class="min-h-screen">
-<header class="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-gray-800">
-  <div class="flex items-baseline gap-2">
-    <h1 class="text-base sm:text-lg font-bold">AGNI <span class="text-orange-400">Fraud Wind Tunnel</span></h1>
-    <span id="calBadge" class="chip border-gray-600 text-gray-500">anchor</span>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>AGNI <span>WIND TUNNEL</span></h1>
+    <span class="sub">closed-loop GenAI payment fraud · red team / blue team</span>
   </div>
-  <div class="flex items-center gap-2">
-    <span id="genomeCount" class="chip border-gray-600 text-gray-400">38 vectors</span>
-    <span id="tteBadge" class="chip border-orange-500 text-orange-300">TtE -</span>
-    <button id="runBtn" class="bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg">Run generation</button>
+  <div class="rubric" id="rubric"></div>
+  <div class="actions">
+    <span class="badge" id="calBadge">anchor</span>
+    <span class="badge" id="llmBadge">llm off</span>
+    <button class="btn" id="runBtn">Run generation</button>
   </div>
 </header>
 
-<main class="grid grid-cols-12 gap-3 p-3 sm:p-4">
-
-  <section class="col-span-12 xl:col-span-2 card p-3 flex flex-col max-h-[80vh]">
-    <h2 class="font-semibold text-sm">Fraud Genome</h2>
-    <input id="gSearch" placeholder="filter..." class="my-2 bg-gray-900 border border-gray-800 rounded px-2 py-1 text-xs"/>
-    <ul id="genomeList" class="space-y-1 overflow-y-auto text-xs flex-1"></ul>
-    <div id="genomeDetail" class="mt-2 pt-2 border-t border-gray-800 text-[10px] text-gray-400 max-h-40 overflow-y-auto"></div>
+<main class="grid">
+  <section class="col">
+    <h2>Identify · Genome</h2>
+    <input class="search" id="gSearch" placeholder="filter id, rail, surface"/>
+    <ul class="glist" id="genomeList"></ul>
+    <div class="gdetail" id="genomeDetail">Select a vector.</div>
   </section>
 
-  <section class="col-span-12 xl:col-span-3 card p-3 flex flex-col max-h-[80vh]">
-    <h2 class="font-semibold text-sm">Agent Council</h2>
-    <p class="text-[10px] text-gray-500 mb-2">Scout · Forge · Critic</p>
-    <div id="council" class="overflow-y-auto text-xs space-y-2 flex-1 font-mono"></div>
+  <section class="col">
+    <h2>Generate · Attack theater</h2>
+    <svg id="mule" viewBox="0 0 640 140" aria-label="Mule ring"></svg>
+    <div class="theater" id="theater"></div>
   </section>
 
-  <section class="col-span-12 xl:col-span-4 card p-3 flex flex-col max-h-[80vh]">
-    <h2 class="font-semibold text-sm">Attack Theater</h2>
-    <div id="theater" class="overflow-y-auto space-y-2 text-xs flex-1"></div>
+  <section class="col">
+    <h2>Loop · Agent council</h2>
+    <div class="feed" id="council"></div>
   </section>
 
-  <section class="col-span-12 xl:col-span-3 card p-3 flex flex-col max-h-[80vh]">
-    <h2 class="font-semibold text-sm">Defense Console</h2>
-    <div id="cards" class="grid grid-cols-2 gap-1 text-center mb-2"></div>
+  <section class="col">
+    <h2>Defend · Sentinel</h2>
+    <div class="metrics" id="cards"></div>
     <canvas id="armsChart" height="110"></canvas>
-    <canvas id="baselineChart" height="90" class="mt-2"></canvas>
-    <div id="heatmap" class="mt-2 overflow-y-auto max-h-28 text-[9px] grid grid-cols-6 gap-0.5"></div>
-    <div id="runlog" class="mt-2 text-[10px] text-gray-500 font-mono overflow-y-auto flex-1"></div>
+    <canvas id="baselineChart" height="90"></canvas>
+    <div class="heat" id="heatmap"></div>
+    <div class="log" id="runlog"></div>
   </section>
 </main>
-
-<footer class="px-5 pb-2 text-[10px] text-gray-600">Sandbox · synthetic identities only</footer>
+<footer class="foot">Sandbox · synthetic identities · TTP-level playbooks · IEEE-CIS derived stats only</footer>
 
 <script>
 let state = {history:[], genomes:[], alerts:[], artifacts:[], agent_log:[], vector_det_rates:{},
-  tte_generations:0, loop_gain_auc:0, fidelity_mean:0, baseline_recall:null, calibrated:false};
+  mule_graph:{}, tte_generations:0, loop_gain_auc:0, fidelity_mean:0, baseline_recall:null,
+  calibrated:false, llm_enabled:false};
 
-function metricCards(){
+function rubric(){
   const h=state.history, last=h[h.length-1]||{};
-  const cards=[
-    ["ROC AUC",last.roc_auc??"-"],["Recall",last.recall??"-"],
-    ["FPR",last.fpr!=null?(last.fpr*100).toFixed(2)+"%":"-"],
-    ["Fidelity",state.fidelity_mean||"-"],
-    ["Rules rec",last.baseline_recall!=null?(last.baseline_recall*100).toFixed(0)+"%":(state.baseline_recall!=null?(state.baseline_recall*100).toFixed(0)+"%":"-")],
-    ["TtE",state.tte_generations||0],
+  const cells=[
+    ["Identify",(state.genomes||[]).length+" vec"],
+    ["Generate",(state.fidelity_mean||"—")],
+    ["Defend", last.roc_auc ?? "—"],
+    ["Loop","TtE "+(state.tte_generations||0)],
   ];
-  document.getElementById("cards").innerHTML=cards.map(([k,v])=>
-    `<div class="bg-gray-900/60 rounded py-1.5"><div class="text-[9px] text-gray-500">${k}</div>
-     <div class="text-sm font-bold text-orange-300">${v}</div></div>`).join("");
-  document.getElementById("tteBadge").textContent="TtE "+(state.tte_generations||0);
-  document.getElementById("genomeCount").textContent=(state.genomes||[]).length+" vectors";
-  document.getElementById("calBadge").textContent=state.calibrated?"IEEE-CIS calibrated":"offline twin";
-  document.getElementById("calBadge").className="chip "+(state.calibrated?"border-green-600 text-green-400":"border-gray-600 text-gray-500");
+  document.getElementById("rubric").innerHTML=cells.map(([k,v])=>
+    `<div><kbd>${k}</kbd><b class="num">${v}</b></div>`).join("");
+}
+
+function cards(){
+  const last=(state.history||[])[state.history.length-1]||{};
+  const items=[
+    ["ROC AUC", last.roc_auc ?? "—"],
+    ["Recall", last.recall ?? "—"],
+    ["FPR", last.fpr!=null?(last.fpr*100).toFixed(2)+"%":"—"],
+    ["Rules rec", last.baseline_recall!=null?(last.baseline_recall*100).toFixed(1)+"%":"—"],
+  ];
+  document.getElementById("cards").innerHTML=items.map(([k,v])=>
+    `<div><kbd>${k}</kbd><b class="num">${v}</b></div>`).join("");
+  document.getElementById("calBadge").textContent=state.calibrated?"IEEE-CIS":"offline twin";
+  document.getElementById("calBadge").className="badge"+(state.calibrated?" on":"");
+  document.getElementById("llmBadge").textContent=state.llm_enabled?"DeepSeek on":"llm off";
+  document.getElementById("llmBadge").className="badge"+(state.llm_enabled?" llm":"");
 }
 
 function charts(){
   const labels=state.history.map(h=>"g"+h.generation);
-  const mk=(id,datasets)=>{
+  const mk=(id,datasets,ymin)=>{
     const el=document.getElementById(id); if(!el) return;
-    const opts={plugins:{legend:{labels:{color:"#9ca3af",font:{size:9}}}},
-      scales:{x:{ticks:{color:"#6b7280",fontSize:8}},y:{min:0.5,max:1,ticks:{color:"#6b7280",fontSize:8}}}};
+    const opts={plugins:{legend:{labels:{color:"#7a8896",font:{size:10,family:"IBM Plex Sans"}}}},
+      scales:{x:{ticks:{color:"#7a8896",font:{size:9}}},y:{min:ymin,ticks:{color:"#7a8896"}}}};
     if(el.chart){el.chart.data.labels=labels; el.chart.data.datasets=datasets; el.chart.update(); return;}
     el.chart=new Chart(el,{type:"line",data:{labels,datasets},options:opts});
   };
   mk("armsChart",[
-    {label:"Retrained AUC",data:state.history.map(h=>h.roc_auc),borderColor:"#fb923c",backgroundColor:"#fb923c22",fill:false,tension:.3,pointRadius:2},
-    {label:"Frozen AUC",data:state.history.map(h=>h.frozen_auc),borderColor:"#a78bfa",backgroundColor:"#a78bfa22",fill:false,tension:.3,pointRadius:2,spanGaps:true},
-  ]);
+    {label:"Retrained",data:state.history.map(h=>h.roc_auc),borderColor:"#e8572a",tension:.25,pointRadius:2,fill:false},
+    {label:"Frozen",data:state.history.map(h=>h.frozen_auc),borderColor:"#8b7cf6",tension:.25,pointRadius:2,spanGaps:true,fill:false},
+  ],0.5);
   mk("baselineChart",[
-    {label:"Sentinel recall",data:state.history.map(h=>h.recall),borderColor:"#34d399",tension:.3,pointRadius:2},
-    {label:"Rules recall",data:state.history.map(h=>h.baseline_recall),borderColor:"#f87171",tension:.3,pointRadius:2},
-  ]);
+    {label:"Sentinel",data:state.history.map(h=>h.recall),borderColor:"#3d9a7a",tension:.25,pointRadius:2,fill:false},
+    {label:"Rules",data:state.history.map(h=>h.baseline_recall),borderColor:"#f07a6a",tension:.25,pointRadius:2,fill:false},
+  ],0);
 }
 
 function heatmap(){
   const rates=state.vector_det_rates||{};
-  const el=document.getElementById("heatmap");
   const ids=Object.keys(rates).sort().slice(0,36);
-  if(!ids.length){el.innerHTML='<span class="text-gray-600 col-span-6">Run loop for vector heatmap</span>'; return;}
+  const el=document.getElementById("heatmap");
+  if(!ids.length){el.innerHTML="<i>—</i>"; return;}
   el.innerHTML=ids.map(id=>{
     const r=rates[id];
-    const cls=r<0.5?"heat-lo":r<0.8?"heat-mid":"heat-hi";
-    return `<div class="${cls} rounded px-0.5 py-1 text-center" title="${id}: ${(r*100).toFixed(0)}%">${id.replace("GEN-","")}</div>`;
+    const cls=r<0.5?"lo":r<0.8?"mid":"hi";
+    return `<i class="${cls}" title="${id} ${(r*100).toFixed(0)}%">${id.replace("GEN-","")}</i>`;
   }).join("");
 }
 
+function mule(){
+  const g=state.mule_graph||{};
+  const svg=document.getElementById("mule");
+  const nodes=g.nodes||[], edges=g.edges||[];
+  if(!nodes.length){svg.innerHTML='<text x="16" y="72" fill="#7a8896" font-size="11">Mule graph after a generation</text>'; return;}
+  const sink=g.sink;
+  const others=nodes.filter(n=>n.id!==sink);
+  const cx=520, cy=70;
+  let html=`<text x="12" y="18" fill="#7a8896" font-size="10" font-family="IBM Plex Mono">MULE RING · unique-src fan-in</text>`;
+  others.forEach((n,i)=>{
+    const a=(Math.PI*1.2)*(i/(Math.max(others.length-1,1)))-0.6;
+    const x=80+Math.cos(a)*70, y=70+Math.sin(a)*48;
+    n._x=x; n._y=y;
+    html+=`<line x1="${x}" y1="${y}" x2="${cx}" y2="${cy}" stroke="#1e2a36"/>`;
+    html+=`<circle cx="${x}" cy="${y}" r="5" fill="#121922" stroke="#7a8896"/>`;
+  });
+  html+=`<circle cx="${cx}" cy="${cy}" r="10" fill="#e8572a"/><text x="${cx+16}" y="${cy+4}" fill="#e8edf2" font-size="10" font-family="IBM Plex Mono">${(sink||"sink").slice(0,18)}</text>`;
+  svg.innerHTML=html;
+}
+
 function council(){
+  const logs=(state.agent_log||[]).slice(-16).reverse();
   const el=document.getElementById("council");
-  const logs=(state.agent_log||[]).slice(-20).reverse();
-  if(!logs.length){el.innerHTML='<div class="text-gray-600">Agent Council idle — run a generation.</div>'; return;}
-  el.innerHTML=logs.map(l=>{
-    const col=l.agent==="scout"?"text-blue-300":l.agent==="critic"?"text-purple-300":"text-orange-300";
-    return `<div class="border-l-2 border-gray-700 pl-2"><span class="${col} font-semibold">${l.agent}</span>
-      <span class="text-gray-600"> gen${l.gen}</span><div class="text-gray-300 mt-0.5">${l.message}</div></div>`;
-  }).join("");
+  if(!logs.length){el.innerHTML='<div class="msg"><p>Council idle. Run a generation.</p></div>'; return;}
+  el.innerHTML=logs.map(l=>`<div class="msg ${l.agent||""}">
+    <div class="who"><b>${l.agent||"agent"}</b> · gen ${l.gen}</div>
+    <p>${l.message||""}</p></div>`).join("");
 }
 
 function genomeList(){
   const q=document.getElementById("gSearch").value.toLowerCase();
   document.getElementById("genomeList").innerHTML=(state.genomes||[]).filter(g=>
-    !q||g.name.toLowerCase().includes(q)||g.id.toLowerCase().includes(q))
-    .map(g=>`<li><button onclick="showGenome('${g.id}')" class="w-full text-left hover:bg-gray-800 rounded px-1 py-0.5">
-      <span class="text-gray-500">${g.id}</span> ${g.tier?`<span class="chip">${g.tier}</span>`:""}
-      ${g.name.slice(0,28)}</button></li>`).join("");
+    !q || JSON.stringify(g).toLowerCase().includes(q))
+    .map(g=>`<li><button onclick="showGenome('${g.id}')">
+      <span class="id">${g.id}</span><span class="tier">${g.tier||"B"}</span>${(g.name||"").slice(0,32)}
+    </button></li>`).join("");
 }
 
 window.showGenome=function(id){
   const g=state.genomes.find(x=>x.id===id); if(!g) return;
   document.getElementById("genomeDetail").innerHTML=
-    `<b>${g.name}</b> [tier ${g.tier||"?"} · ${g.origin||"seed"}]<br>${g.summary||""}`;
+    `<b>${g.name}</b><br>tier ${g.tier||"?"} · ${g.origin||"seed"} · ${(g.rails||[]).join(", ")}<br>${g.summary||""}`;
 };
 
 function theater(){
   const t=document.getElementById("theater");
   const items=[...(state.alerts||[]).map(a=>({t:"txn",ts:a.ts,a})),
-    ...(state.artifacts||[]).map(a=>({t:"art",ts:a.ts,a}))].sort((x,y)=>new Date(y.ts)-new Date(x.ts)).slice(0,35);
-  if(!items.length){t.innerHTML='<div class="text-gray-600">Press Run generation.</div>'; return;}
+    ...(state.artifacts||[]).map(a=>({t:"art",ts:a.ts,a}))].sort((x,y)=>new Date(y.ts)-new Date(x.ts)).slice(0,28);
+  if(!items.length){t.innerHTML='<div class="card">No kill-chain yet.</div>'; return;}
   t.innerHTML=items.map(({t:ty,a})=>{
     if(ty==="art"){
-      const forge=a.forge_source==="llm"?'<span class="chip border-yellow-500 text-yellow-300">LLM</span>':"";
-      return `<div class="border-l-2 border-orange-400 pl-2 py-1"><span class="text-orange-300">${a.kind}</span> ${forge}
-        <div class="italic text-gray-300">"${a.text}"</div></div>`;
+      const llm=a.forge_source==="llm"?'<span class="llm-tag">FORGE LLM</span>':"";
+      return `<div class="card"><span class="k">${a.kind}</span>${llm}<div>${a.text||""}</div></div>`;
     }
-    const expl=(a.explanations||[]).map(e=>`<span class="chip">${e.feature}</span>`).join(" ");
-    return `<div class="border-l-2 ${a.flag?"border-red-500":"border-gray-700"} pl-2 py-1">
-      <span class="${a.is_fraud?"fraud":"ok"}">${a.is_fraud?"ATTACK":"flag"} ₹${Number(a.amount).toLocaleString("en-IN")}</span>
-      <span class="text-gray-600 float-right">${a.score}</span>
-      ${expl?`<div class="mt-0.5">${expl}</div>`:""}</div>`;
+    const expl=(a.explanations||[]).map(e=>`<span class="chip">${e.feature}</span>`).join("");
+    return `<div class="card"><span class="amt ${a.is_fraud?"fraud":"ok"}">${a.is_fraud?"ATTACK":"FLAG"} ₹${Number(a.amount).toLocaleString("en-IN")}</span>
+      <span class="num" style="float:right;color:#7a8896">${a.score}</span>
+      <div class="chips">${expl}</div></div>`;
   }).join("");
 }
 
 async function refresh(){
   const r=await fetch("/api/state"); state=await r.json();
-  metricCards(); charts(); heatmap(); council(); genomeList(); theater();
+  rubric(); cards(); charts(); heatmap(); mule(); council(); genomeList(); theater();
 }
 
 document.getElementById("runBtn").onclick=async(e)=>{
-  e.target.disabled=true; e.target.textContent="Running...";
+  e.target.disabled=true; e.target.textContent="Running…";
   try{
     const r=await fetch("/api/loop/run",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({generations:1})});
-    const d=await r.json();
-    (d.agent_log||[]).forEach(l=>{});
+    if(!r.ok) throw new Error("run failed");
     await refresh();
+  } catch(err){
+    document.getElementById("runlog").textContent="Generation timed out or failed on this dyno. Metrics above are from the seeded run.";
   } finally { e.target.disabled=false; e.target.textContent="Run generation"; }
 };
 document.getElementById("gSearch").oninput=genomeList;

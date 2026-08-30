@@ -109,10 +109,13 @@ def load_anchor_sample(max_rows: int = 20000) -> dict | None:
     df = pd.read_csv(csv, usecols=["TransactionAmt", "TransactionDT"])
     if len(df) > max_rows:
         df = df.sample(max_rows, random_state=0)
+    fx = float(os.environ.get("AGNI_USD_INR", DEFAULT_USD_INR))
     _ANCHOR_CACHE["_v"] = {
-        "amount": df["TransactionAmt"].to_numpy(dtype=float),
+        "amount": df["TransactionAmt"].to_numpy(dtype=float) * fx,
         "hour": ((df["TransactionDT"].to_numpy(dtype=np.int64) // 3600) % 24),
         "source": csv.name,
+        "fx": fx,
+        "unit": "INR",
     }
     return _ANCHOR_CACHE["_v"]
 

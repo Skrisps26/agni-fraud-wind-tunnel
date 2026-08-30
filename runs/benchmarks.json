@@ -3,46 +3,24 @@
     {
       "seed": 7,
       "tte": 4,
-      "fidelity": 0.5704,
-      "final_auc": 0.9977,
-      "final_recall": 0.896,
-      "final_fpr": 0.00392,
-      "baseline_recall": 0.0166,
-      "frozen_auc_min": 0.9919,
-      "agent_log_entries": 13
-    },
-    {
-      "seed": 42,
-      "tte": 4,
-      "fidelity": 0.569,
-      "final_auc": 0.9965,
-      "final_recall": 0.9106,
-      "final_fpr": 0.00488,
-      "baseline_recall": 0.0212,
-      "frozen_auc_min": 0.9916,
-      "agent_log_entries": 15
-    },
-    {
-      "seed": 99,
-      "tte": 4,
-      "fidelity": 0.5696,
-      "final_auc": 0.9962,
-      "final_recall": 0.8937,
-      "final_fpr": 0.00388,
-      "baseline_recall": 0.0102,
-      "frozen_auc_min": 0.992,
-      "agent_log_entries": 15
+      "fidelity": 0.6676,
+      "final_auc": 0.9954,
+      "final_recall": 0.8929,
+      "final_fpr": 0.0039,
+      "baseline_recall": 0.0156,
+      "frozen_auc_min": 0.9895
     }
   ],
   "calibrated": true,
+  "fx_inr": true,
   "summary": {
     "mean": {
-      "tte": 4.0,
-      "fidelity": 0.5697,
-      "final_auc": 0.9968,
-      "final_recall": 0.9001,
-      "final_fpr": 0.0042,
-      "baseline_recall": 0.016
+      "tte": 4,
+      "fidelity": 0.6676,
+      "final_auc": 0.9954,
+      "final_recall": 0.8929,
+      "final_fpr": 0.0039,
+      "baseline_recall": 0.0156
     }
   }
 }

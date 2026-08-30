@@ -4,6 +4,23 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
+
+
+def _load_dotenv() -> None:
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        k, v = k.strip(), v.strip().strip('"').strip("'")
+        os.environ.setdefault(k, v)
+
+
+_load_dotenv()
 
 
 def _int(name: str, default: int) -> int:
@@ -38,6 +55,11 @@ class Config:
     text_blend_weight: float = field(default_factory=lambda: _float("AGNI_TEXT_WEIGHT", 0.20))
     generations: int = field(default_factory=lambda: _int("AGNI_GENERATIONS", 5))
     evasion_gens: int = field(default_factory=lambda: _int("AGNI_EVASION_GENS", 2))
+    cloud: bool = field(default_factory=lambda: os.environ.get("AGNI_CLOUD", "").lower()
+                        in ("1", "true", "yes") or bool(os.environ.get("RENDER")))
+    held_out_playbooks: tuple[str, ...] = (
+        "mule_graph_ring", "subscription_mandate_trap", "npci_chatbot_phish",
+    )
 
     # --- optional LLM enrichment ---
     llm_provider: str = field(default_factory=lambda: os.environ.get("AGNI_LLM_PROVIDER", "none"))

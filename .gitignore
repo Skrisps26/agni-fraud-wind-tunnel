@@ -6,6 +6,8 @@ venv/
 runs/*.json
 !runs/.gitkeep
 !runs/benchmarks.json
+!runs/latest.json
+!runs/llm_cache.json
 data/anchor/*.csv
 data/anchor/*.zip
 *.egg-info/

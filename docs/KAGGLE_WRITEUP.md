@@ -1,45 +1,37 @@
-# AGNI — Mastercard Innovation Challenge 2026
+# AGNI — Triple-Agent Fraud Wind Tunnel
 
-## Summary
+Mastercard Innovation Challenge 2026 · AI Defense Lab for Payment Security
 
-**AGNI** is a Triple-Agent Fraud Wind Tunnel: Scout discovers attacks, Forge generates realistic scams, Critic evolves evasion — all inside a Red Queen loop calibrated on **590K real IEEE-CIS transactions**.
+## Criterion map
 
-## Why this wins
+| Judge criterion | Where it lives |
+|-----------------|----------------|
+| Diversity | 13 tier-A playbooks + Scout tier-C; not “38 unique engines” |
+| Fidelity | IEEE-CIS tickets **FX-converted USD→INR** before KS; Forge LLM text |
+| Detection | Sentinel vs conservative rules; held-out mule/mandate/NPCI on gen 0 |
+| Novelty | Red Queen + Agent Council + mule graph (unique-src fan-in) |
+| Feasibility | Hosted prototype, FPR budget 0.5%, no PII, Agent Pay vectors |
 
-- **Real GenAI:** DeepSeek-powered Scout/Forge/Critic (offline fallback included)
-- **Real data:** Fidelity scored vs IEEE-CIS marginals, not self-referential
-- **Measurable arms race:** TtE, frozen AUC decay, evasion-pressure generations
-- **Proof of value:** Sentinel **90%** recall vs static rules **1.6%**
-- **India-specific:** UPI, digital arrest, NPCI, agentic checkout — 38 vectors
+## Thesis
 
-## Links
+A payment fraud **wind tunnel**: Scout invents the next GenAI attack, Forge simulates it on a twin calibrated to real tickets, Critic mutates until a frozen model is stressed, Sentinel retrains. Graph-shaped observables (unique senders into a sink in 1h) are what Decision Intelligence already uses on mule rings. Agentic checkout vectors (GEN-007/018/029) match Agent Pay: stored token, no step-up, prompt-injected listing.
 
-- **GitHub:** https://github.com/Skrisps26/agni-fraud-wind-tunnel
-- **Walkthrough:** `docs/AGNI_Solution_Walkthrough.docx`
-- **Demo:** `make setup && make calibrate && make api`
+## Kill-chain (GEN-002)
 
-## Headline numbers
+Deepfake video-call artifact → escalating UPI “verification” → mule layering → Sentinel (velocity + text) → Critic slows the burst. Held-out GEN-038 (mule ring) is **absent from gen-0 training**, then injected so frozen AUC / heatmap can show a real miss.
 
-| Metric | Value |
-|--------|-------|
-| ROC AUC | 0.997 |
-| Sentinel recall | 90% |
-| Rules baseline recall | 1.6% |
-| FPR | 0.42% |
-| TtE | 4 generations |
-| Vectors | 38 |
-
-## Three pillars
-
-1. **Identify** — Scout Agent + 38 Fraud Genome vectors (tier A/B/C)
-2. **Generate** — 13 playbooks + Forge LLM artifacts + Fidelity Judge
-3. **Defend** — Sentinel fusion detector + SHAP-lite + rules baseline
-
-## DeepSeek setup (optional, ~$0.50/demo)
+## Reproduce
 
 ```
-AGNI_LLM_PROVIDER=deepseek
-AGNI_LLM_BASE_URL=https://api.deepseek.com
-AGNI_LLM_API_KEY=sk-...
-AGNI_LLM_MODEL=deepseek-chat
+make setup
+cp train_transaction.csv data/anchor/
+make calibrate
+make loop
+make api
 ```
+
+DeepSeek (optional): set AGNI_LLM_* in `.env`. Cloud: `AGNI_CLOUD=1` + Dockerfile.
+
+## Responsible use
+
+Synthetic identities only. Playbooks are TTP-level research artifacts.

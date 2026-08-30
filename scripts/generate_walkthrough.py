@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate AGNI solution walkthrough .docx for Mastercard Innovation Challenge 2026."""
+"""Generate AGNI solution walkthrough .docx."""
 
 from __future__ import annotations
 
@@ -14,10 +14,6 @@ SEED_DIR = ROOT / "agni" / "genome" / "seed"
 BENCH = ROOT / "runs" / "benchmarks.json"
 CALIB = ROOT / "agni" / "twin" / "calibration.json"
 OUT = ROOT / "docs" / "AGNI_Solution_Walkthrough.docx"
-
-
-def add_heading(doc: Document, text: str, level: int = 1) -> None:
-    doc.add_heading(text, level=level)
 
 
 def add_para(doc: Document, text: str, bold: bool = False) -> None:
@@ -35,121 +31,97 @@ def main() -> None:
     tier_a = sum(1 for p in genomes if json.loads(p.read_text()).get("tier") == "A")
 
     doc = Document()
-    title = doc.add_heading("AGNI — Triple-Agent Fraud Wind Tunnel", 0)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    sub = doc.add_paragraph(
-        "Mastercard Innovation Challenge 2026 · AI Defense Lab for Payment Security")
-    sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    t = doc.add_heading("AGNI — Triple-Agent Fraud Wind Tunnel", 0)
+    t.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    s = doc.add_paragraph("Mastercard Innovation Challenge 2026 · AI Defense Lab")
+    s.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    add_heading(doc, "1. Executive Summary", 1)
+    doc.add_heading("1. What this is", 1)
     add_para(doc, (
-        "AGNI is a closed-loop adversarial AI system for GenAI-powered payment fraud. "
-        "Three LLM agents — Scout (identify), Forge (generate), Critic (evolve) — operate "
-        "inside a Red Queen wind tunnel calibrated on 590,540 real IEEE-CIS/Vesta transactions. "
-        "We measure Time-to-Evade (TtE): how many generations a frozen defender survives "
-        "before evolving attacks bypass it."
+        "AGNI is a closed-loop wind tunnel for GenAI payment fraud. "
+        "Scout proposes vectors from threat intel, Forge writes scam artifacts, "
+        "Critic mutates toward defender blind spots, Sentinel retrains under an FPR budget. "
+        "Prototype URL belongs in the Kaggle writeup after Render deploy."
     ))
-    bl = summary.get("baseline_recall", 0.016)
     add_para(doc, (
-        f"Headline results (seeds 7/42/99, IEEE-CIS calibrated): "
-        f"ROC AUC {summary.get('final_auc', 0.997):.3f}, "
-        f"Sentinel recall {summary.get('final_recall', 0.90):.1%}, "
-        f"static rules recall {bl:.1%}, "
+        f"Headline (multi-seed, IEEE-CIS FX-normalized): "
+        f"AUC {summary.get('final_auc', 0.99):.3f}, "
+        f"Sentinel recall {summary.get('final_recall', 0.9):.0%}, "
+        f"rules recall {summary.get('baseline_recall', 0.02):.1%}, "
         f"FPR {summary.get('final_fpr', 0.004)*100:.2f}%, "
-        f"TtE {summary.get('tte', 4):.0f} gens, "
-        f"{len(genomes)} vectors ({tier_a} tier-A playbooks)."
+        f"TtE {summary.get('tte', 4):.0f}, "
+        f"{tier_a} tier-A playbooks / {len(genomes)} labelled vectors."
     ), bold=True)
 
-    add_heading(doc, "2. Triple-Agent Council", 1)
+    doc.add_heading("2. Rubric map", 1)
+    tbl = doc.add_table(rows=1, cols=2)
+    tbl.style = "Table Grid"
+    tbl.rows[0].cells[0].text = "Criterion"
+    tbl.rows[0].cells[1].text = "Evidence"
+    for a, b in [
+        ("Diversity", "13 executable playbooks (tier A) + param variants (B) + Scout (C)"),
+        ("Fidelity", "KS vs IEEE-CIS amounts converted USD→INR; hour shape; velocity; Forge text"),
+        ("Detection", "Fusion HGB+TF-IDF; held-out mule/mandate/NPCI on gen 0; FPR ≤ 0.5%"),
+        ("Novelty", "Red Queen TtE; Agent Council; unique-src 1h mule graph"),
+        ("Feasibility", "Hosted SOC UI; score API; no PII; Agent Pay token-abuse vectors"),
+    ]:
+        row = tbl.add_row().cells
+        row[0].text, row[1].text = a, b
+
+    doc.add_heading("3. Identify", 1)
     add_para(doc, (
-        "Scout Agent: reads curated threat intel (FBI AI-fraud, India digital-arrest, NPCI "
-        "UPI advisories) plus defender blind spots; proposes new AttackGenome JSON each "
-        "2 generations (DeepSeek API, offline fallback included).\n\n"
-        "Forge Agent: LLM-enriches scam artifacts (SMS, transcripts, emails) for realism; "
-        "cached per attack_id.\n\n"
-        "Critic Agent: analyzes detection rates and feature blind spots; narrates mutation "
-        "strategy in the Agent Council UI."
+        "Do not treat 38 JSON files as 38 unique simulators. Tier A has dedicated playbooks "
+        "(voice clone, digital arrest, BEC, KYC bust-out, smishing, QR swap, investment pump, "
+        "agentic gift cards, mule recruitment, NPCI chatbot, mandate trap, mule graph ring). "
+        "Scout may add GEN-S*** at runtime from FBI/NPCI/digital-arrest intel."
     ))
 
-    add_heading(doc, "3. Threat Landscape — Fraud Genome", 1)
+    doc.add_heading("4. Generate & fidelity", 1)
+    rows = calib.get("rows_used", 0)
     add_para(doc, (
-        f"{len(genomes)} vectors tiered honestly: Tier A = dedicated playbook, "
-        "Tier B = param variant, Tier C = Scout-discovered at runtime."
-    ))
-    table = doc.add_table(rows=1, cols=7)
-    table.style = "Table Grid"
-    hdr = table.rows[0].cells
-    for i, h in enumerate(["ID", "Tier", "Vector", "Rails", "Surface", "Capability", "Playbook"]):
-        hdr[i].text = h
-    for p in genomes:
-        g = json.loads(p.read_text())
-        row = table.add_row().cells
-        row[0].text = g["id"]
-        row[1].text = g.get("tier", "B")
-        row[2].text = g["name"][:40]
-        row[3].text = ", ".join(g.get("rails", []))
-        row[4].text = ", ".join(g.get("surfaces", []))[:30]
-        row[5].text = ", ".join(g.get("capabilities", []))[:30]
-        row[6].text = g.get("playbook", "")
-
-    add_heading(doc, "4. Real-Data Grounding", 1)
-    rows = calib.get("rows_used", "N/A")
-    med = calib.get("amount_usd", {}).get("median", "N/A")
-    inr = calib.get("consumer_median_inr", "N/A")
-    add_para(doc, (
-        f"Fitted from IEEE-CIS train_transaction.csv: {rows:,} rows, "
-        f"median ticket ${med} USD, consumer target {inr} INR. "
-        "Fidelity Judge scores KS distance vs real amount/hour marginals."
+        f"Twin fitted on {rows:,} IEEE-CIS rows. Judge compares attack INR amounts to "
+        f"TransactionAmt × {calib.get('notes', ['fx=83'])[-1]}. "
+        "Hour KS uses Vesta shape only (epoch unknown). "
+        "Forge enriches one artifact per (genome, kind) when DeepSeek is on."
     ))
 
-    add_heading(doc, "5. Kill-Chain Walkthrough — GEN-002 Digital Arrest", 1)
+    doc.add_heading("5. Defend", 1)
     add_para(doc, (
-        "1. Forge generates deepfake video-call transcript artifact.\n"
-        "2. Victim coerced into escalating UPI 'verification' transfers.\n"
-        "3. Funds layer through mule VPAs (dst_fan_in signal).\n"
-        "4. Sentinel flags via velocity + text fusion; SHAP-lite shows vel_1h, amt_z_user.\n"
-        "5. Critic mutates: spread transfers over 6h to evade velocity windows.\n"
-        "6. Evasion-pressure generations (frozen defender) show frozen AUC dip; retrain recovers."
+        "Sentinel: HistGradientBoosting on velocity, z-score, fan-in, unique senders in 1h, "
+        "new dests in 24h, plus TF-IDF on artifacts. Threshold maximizes F1 under FPR 0.5%. "
+        "Gen 0 omits mule_graph_ring, subscription_mandate_trap, npci_chatbot_phish so a frozen "
+        "defender faces a true held-out pattern. Conservative velocity/amount rules are the baseline — "
+        "not Mastercard Decision Intelligence."
     ))
-
-    add_heading(doc, "6. Detection Efficacy", 1)
-    bt = doc.add_table(rows=1, cols=7)
+    bt = doc.add_table(rows=1, cols=6)
     bt.style = "Table Grid"
-    bh = bt.rows[0].cells
-    for i, h in enumerate(["Seed", "AUC", "Recall", "Rules Rec", "FPR", "Fidelity", "TtE"]):
-        bh[i].text = h
+    for i, h in enumerate(["Seed", "AUC", "Recall", "Rules", "FPR", "Fidelity"]):
+        bt.rows[0].cells[i].text = h
     for r in bench.get("benchmarks", []):
         row = bt.add_row().cells
-        row[0].text = str(r["seed"])
-        row[1].text = f"{r['final_auc']:.4f}"
-        row[2].text = f"{r['final_recall']:.1%}"
+        row[0].text = str(r.get("seed", ""))
+        row[1].text = f"{r.get('final_auc', 0):.4f}"
+        row[2].text = f"{r.get('final_recall', 0):.1%}"
         row[3].text = f"{r.get('baseline_recall', 0):.1%}"
-        row[4].text = f"{r.get('final_fpr', r.get('fpr', 0))*100:.2f}%"
-        row[5].text = f"{r['fidelity']:.3f}"
-        row[6].text = str(r["tte"])
+        fpr = r.get("final_fpr", r.get("fpr", 0))
+        row[4].text = f"{fpr*100:.2f}%"
+        row[5].text = f"{r.get('fidelity', 0):.3f}"
 
-    add_heading(doc, "7. Real-World Feasibility", 1)
+    doc.add_heading("6. Feasibility & GFF demo (90s)", 1)
     add_para(doc, (
-        "Wind-tunnel harness for issuers: REST API (POST /api/loop/run), analyst console "
-        "with Agent Council + vector heatmap, labeled data without PII. "
-        "Governance: synthetic identities, TTP-level playbooks only."
+        "Open the hosted URL. Rubric strip = four criteria. Agent Council = Scout/Critic. "
+        "Mule SVG = unique-src fan-in. Heatmap = held-out miss (red) vs caught (green). "
+        "Agent Pay: GEN-007 listing injection, stored agentic token, no step-up. "
+        "Governance: synthetic IDs; raw Vesta CSV never redistributed."
     ))
-
-    add_heading(doc, "8. GFF Demo Script", 1)
-    for i, s in enumerate([
-        "Open http://localhost:8000 — confirm 'IEEE-CIS calibrated' badge",
-        "Agent Council: show Scout discovery + Critic mutation messages",
-        "Run generation — arms race chart: frozen AUC vs retrained AUC",
-        "Vector heatmap: red = blind spot, green = caught",
-        "Attack Theater: LLM-enriched artifact + SHAP-lite flagged txn",
-        "Baseline bar: rules 1.6% recall vs Sentinel 90%+",
+    for i, x in enumerate([
+        "Confirm IEEE-CIS + LLM badges",
+        "Click GEN-038 / GEN-002",
+        "Run one generation if the dyno is awake",
+        "Walk Forge LLM artifact vs template",
+        "Close on rules vs Sentinel recall",
     ], 1):
-        doc.add_paragraph(f"{i}. {s}", style="List Number")
-
-    add_heading(doc, "Appendix", 1)
-    for cmd in ["make setup", "cp train_transaction.csv data/anchor/", "make calibrate",
-                "make loop", "make api"]:
-        doc.add_paragraph(cmd, style="List Bullet")
+        doc.add_paragraph(f"{i}. {x}", style="List Number")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     doc.save(OUT)

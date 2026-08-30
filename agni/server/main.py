@@ -7,17 +7,21 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agni.config import load
 from agni.genome.schema import load_genomes
 from agni.loop.redqueen import _alerts, _artifact_feed, run_loop
 
-app = FastAPI(title="AGNI - Fraud Wind Tunnel", version="0.2.0")
+app = FastAPI(title="AGNI - Fraud Wind Tunnel", version="0.3.0")
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "web"
 RUNS = ROOT / "runs" / "latest.json"
+
+if WEB.exists():
+    app.mount("/static", StaticFiles(directory=str(WEB)), name="static")
 
 _STATE: dict = {"loaded": False}
 
@@ -37,6 +41,7 @@ def _ensure_state() -> None:
         "artifacts": data.get("artifacts", []),
         "agent_log": data.get("agent_log", []),
         "vector_det_rates": data.get("vector_det_rates", {}),
+        "mule_graph": data.get("mule_graph", {"nodes": [], "edges": []}),
         "tte": data.get("tte_generations", 0),
         "loop_gain": data.get("loop_gain_auc", 0.0),
         "fidelity": data.get("fidelity_overall", 0.0),
@@ -45,7 +50,7 @@ def _ensure_state() -> None:
 
 
 class RunRequest(BaseModel):
-    generations: int = 2
+    generations: int = 1
     seed: int | None = None
 
 
@@ -54,10 +59,16 @@ def index() -> FileResponse:
     return FileResponse(WEB / "index.html")
 
 
+@app.get("/health")
+def health() -> JSONResponse:
+    return JSONResponse({"ok": True})
+
+
 @app.get("/api/state")
 def state() -> JSONResponse:
     _ensure_state()
     last = _STATE["history"][-1] if _STATE["history"] else {}
+    cfg = load()
     return JSONResponse({
         "history": _STATE["history"],
         "genomes": _STATE["genomes"],
@@ -65,11 +76,14 @@ def state() -> JSONResponse:
         "artifacts": _STATE["artifacts"],
         "agent_log": _STATE["agent_log"],
         "vector_det_rates": _STATE.get("vector_det_rates") or last.get("vector_det_rates", {}),
+        "mule_graph": _STATE.get("mule_graph") or {},
         "tte_generations": _STATE["tte"],
         "loop_gain_auc": _STATE["loop_gain"],
         "fidelity_mean": _STATE["fidelity"],
         "baseline_recall": last.get("baseline_recall"),
         "calibrated": (ROOT / "agni" / "twin" / "calibration.json").exists(),
+        "llm_enabled": cfg.llm_enabled,
+        "cloud": cfg.cloud,
     })
 
 
@@ -79,7 +93,9 @@ def run(req: RunRequest) -> JSONResponse:
     cfg = load()
     if req.seed is not None:
         cfg.seed = int(req.seed)
-    result, extra = run_loop(cfg, generations=max(1, min(int(req.generations), 10)))
+    cap = 1 if cfg.cloud else 10
+    gens = max(1, min(int(req.generations), cap))
+    result, extra = run_loop(cfg, generations=gens)
     base = len(_STATE["history"])
     for i, h in enumerate(result.history):
         h["generation"] = base + i
@@ -89,6 +105,7 @@ def run(req: RunRequest) -> JSONResponse:
     _STATE["artifacts"] = _artifact_feed(extra)
     _STATE["agent_log"] = _STATE.get("agent_log", []) + result.agent_log
     _STATE["vector_det_rates"] = result.vector_det_rates
+    _STATE["mule_graph"] = extra.get("mule_graph") or result.mule_graph
     _STATE["tte"] = max(_STATE["tte"], result.tte_generations)
     _STATE["loop_gain"] = result.loop_gain_auc
     _STATE["fidelity"] = result.fidelity_overall
@@ -97,7 +114,4 @@ def run(req: RunRequest) -> JSONResponse:
                          "agent_log": result.agent_log,
                          "tte_generations": result.tte_generations,
                          "loop_gain_auc": result.loop_gain_auc,
-                         "state": {k: _STATE[k] for k in
-                                   ("history", "artifacts", "agent_log", "vector_det_rates",
-                                    "tte", "loop_gain", "fidelity")},
                          "baseline_recall": last.get("baseline_recall")})

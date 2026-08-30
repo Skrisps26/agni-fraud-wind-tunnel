@@ -14,6 +14,7 @@ FEATURES = [
     "amount_log", "amt_z_user",
     "vel_10m", "vel_1h", "vel_24h",
     "new_dst_pair", "dst_fan_in", "dst_max_src_share", "dst_fwd_rate_24h",
+    "dst_unique_src_1h", "src_new_dst_24h",
     "device_new_for_user",
     "hour_sin", "hour_cos", "off_hours",
     "kind_p2m", "rail_card", "rail_wire", "channel_agent",
@@ -84,6 +85,31 @@ def _dst_features(df: pd.DataFrame, epochs: np.ndarray) -> tuple[np.ndarray, ...
     return fan_in, share, fwd
 
 
+def _dst_unique_src_1h(df: pd.DataFrame, epochs: np.ndarray) -> np.ndarray:
+    out = np.zeros(len(df))
+    for _, idx in df.groupby("dst", sort=False).indices.items():
+        idx = np.asarray(idx)
+        ep = epochs[idx]
+        srcs = df["src"].values[idx]
+        for i, j in enumerate(idx):
+            lo = int(np.searchsorted(ep, ep[i] - 3600, side="left"))
+            out[j] = len(set(srcs[lo:i + 1]))
+    return out
+
+
+def _src_new_dst_24h(df: pd.DataFrame, epochs: np.ndarray) -> np.ndarray:
+    out = np.zeros(len(df))
+    new_pair = ~df.duplicated(["src", "dst"]).to_numpy()
+    for _, idx in df.groupby("src", sort=False).indices.items():
+        idx = np.asarray(idx)
+        ep = epochs[idx]
+        npair = new_pair[idx]
+        for i, j in enumerate(idx):
+            lo = int(np.searchsorted(ep, ep[i] - 86400, side="left"))
+            out[j] = float(npair[lo:i + 1].sum())
+    return out
+
+
 def build_dataset(sim) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Return (features_df[FEATURES], meta_df). Rows are time-sorted."""
     df = sim.ledger.to_df()
@@ -97,6 +123,8 @@ def build_dataset(sim) -> tuple[pd.DataFrame, pd.DataFrame]:
     v10, v1h, v24 = _per_src_velocity(df, epochs)
     amt_z = _expanding_zscore(df)
     fan_in, share, fwd = _dst_features(df, epochs)
+    uniq_1h = _dst_unique_src_1h(df, epochs)
+    new_dst_24 = _src_new_dst_24h(df, epochs)
 
     # pair novelty
     new_pair = ~df.duplicated(["src", "dst"]).to_numpy()
@@ -135,6 +163,8 @@ def build_dataset(sim) -> tuple[pd.DataFrame, pd.DataFrame]:
         "dst_fan_in": np.log1p(fan_in),
         "dst_max_src_share": share,
         "dst_fwd_rate_24h": fwd,
+        "dst_unique_src_1h": np.log1p(uniq_1h),
+        "src_new_dst_24h": new_dst_24.astype(float),
         "device_new_for_user": dev_new,
         "hour_sin": np.sin(2 * np.pi * hours / 24),
         "hour_cos": np.cos(2 * np.pi * hours / 24),

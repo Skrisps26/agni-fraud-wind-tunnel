@@ -6,6 +6,7 @@ from agni.llm.client import chat_text, llm_available
 from agni.llm.prompts import FORGE_SYSTEM
 
 _ENRICH_KINDS = frozenset({"sms", "call_transcript", "email", "doc", "note", "listing"})
+_SEEN: set[tuple[str, str]] = set()
 
 
 def forge_enrich(kind: str, template: str, genome_id: str = "",
@@ -13,6 +14,10 @@ def forge_enrich(kind: str, template: str, genome_id: str = "",
     """Return (enriched_text, source) where source is 'llm' or 'template'."""
     if kind not in _ENRICH_KINDS or not llm_available():
         return template, "template"
+    key = (genome_id or playbook or "g", kind)
+    if key in _SEEN:
+        return template, "template"
+    _SEEN.add(key)
     user = (
         f"Artifact kind: {kind}\n"
         f"Attack vector: {genome_id} ({playbook})\n"
