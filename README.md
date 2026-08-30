@@ -8,7 +8,7 @@ GitHub: [Skrisps26/agni-fraud-wind-tunnel](https://github.com/Skrisps26/agni-fra
 
 AGNI is a **lab wind tunnel + scoring protocol**. Sentinel (the classifier) is one occupant of the tunnel, not a claim of production Mastercard Decision Intelligence.
 
-| Pillar | What ships | Honest bound |
+| Stage | What ships | Honest bound |
 |--------|------------|--------------|
 | **Identify** | Fraud Genome Atlas, 13+ compiled Foundry playbooks, Scout that *compiles* a new playbook (not a JSON clone), documented empty cells | Coverage and TTP distance, not “38 unique engines” |
 | **Generate** | Digital twin (UPI / card / wire / wallet), IEEE-CIS amount/hour calibration (USD→INR), optional LLM artifacts, Critic mutation | IEEE-CIS ≠ live UPI/NPCI rails |
@@ -173,7 +173,7 @@ render.yaml
 
 ---
 
-## Pillars in code
+## How the loop is implemented
 
 ### Identify
 
