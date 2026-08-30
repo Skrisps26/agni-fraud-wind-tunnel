@@ -4,6 +4,9 @@ Mastercard Innovation Challenge 2026 · AI Defense Lab for Payment Security
 
 AGNI is a **wind tunnel + scoring protocol**. Sentinel is one occupant of the tunnel, not the product.
 
+**Live demo:** https://agni-fraud-wind-tunnel.onrender.com  
+**Code:** https://github.com/Skrisps26/agni-fraud-wind-tunnel
+
 ## Criterion map
 
 | Judge criterion | Where it lives | Honest claim |

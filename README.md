@@ -4,6 +4,8 @@
 
 Identify novel GenAI payment-fraud vectors, generate them on a calibrated digital twin, and defend with a measured detector — in one closed loop.
 
+**Live demo:** [agni-fraud-wind-tunnel.onrender.com](https://agni-fraud-wind-tunnel.onrender.com) (free tier may take 30–60s on first request)
+
 GitHub: [Skrisps26/agni-fraud-wind-tunnel](https://github.com/Skrisps26/agni-fraud-wind-tunnel)
 
 AGNI is a **lab wind tunnel + scoring protocol**. Sentinel (the classifier) is one occupant of the tunnel, not a claim of production Mastercard Decision Intelligence.
@@ -216,17 +218,13 @@ UI is same-origin: `GET /` serves `web/dist`.
 
 ## Host (one service)
 
+**Production:** https://agni-fraud-wind-tunnel.onrender.com
+
 Do not split Netlify + API unless you add CORS and an API base URL. This repo is **one Docker web service**.
 
-1. Push `main` (this README assumes GitHub above).
-2. [Render](https://render.com) → New Web Service → Docker, blueprint [`render.yaml`](render.yaml).
-3. Env: `AGNI_CLOUD=1`, `AGNI_LLM_PROVIDER=none` (add LLM keys later if needed).
-4. Health check: `/health`. Do not upload `train_transaction.csv`.
-5. Paste the public URL into [`SUBMISSION.md`](SUBMISSION.md).
+Rebuild: [Render](https://render.com) → this repo → Docker, [`render.yaml`](render.yaml). Env: `AGNI_CLOUD=1`, `AGNI_LLM_PROVIDER=none`. Health check `/health`. Do not upload `train_transaction.csv`.
 
 Free dynos spin down; first request can take 30–60s. Seeded `runs/latest.json` is the judge-safe first paint.
-
-Railway: same Dockerfile and env vars.
 
 ---
 
@@ -237,7 +235,7 @@ Railway: same Dockerfile and env vars.
 | [docs/KAGGLE_WRITEUP.md](docs/KAGGLE_WRITEUP.md) | Criterion map for judges |
 | [docs/SHADOW_MODE.md](docs/SHADOW_MODE.md) | Occupancy / CISO constraints |
 | [docs/walkthrough-outline.md](docs/walkthrough-outline.md) | Demo script |
-| [SUBMISSION.md](SUBMISSION.md) | Live URL placeholder |
+| [SUBMISSION.md](SUBMISSION.md) | Live demo URL |
 | [PRODUCT.md](PRODUCT.md) | Product framing |
 | [web/DESIGN.md](web/DESIGN.md) | UI world |
 

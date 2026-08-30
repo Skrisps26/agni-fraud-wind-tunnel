@@ -62,7 +62,7 @@ Held-out digital twin + Red Queen loop that stress-tests detection **before** at
 
 **Open decisions:**
 
-- Live Render URL not yet recorded in SUBMISSION.md.
+- Live demo: https://agni-fraud-wind-tunnel.onrender.com
 - Walkthrough `.docx` referenced but may still need generation.
 
 ## Brand Commitments

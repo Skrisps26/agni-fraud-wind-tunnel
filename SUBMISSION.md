@@ -2,7 +2,7 @@
 
 ## Live prototype
 
-Paste the Render URL here after deploy.
+https://agni-fraud-wind-tunnel.onrender.com
 
 GitHub: https://github.com/Skrisps26/agni-fraud-wind-tunnel
 
